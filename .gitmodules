@@ -1,0 +1,6 @@
+[submodule "workbox-app"]
+	path = workbox-app
+	url = git@gitlab.com:oojuniin/workbox-app.git
+[submodule "workbox-api"]
+	path = workbox-api
+	url = git@gitlab.com:oojuniin/workbox-api.git
