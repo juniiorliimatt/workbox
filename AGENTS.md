@@ -22,6 +22,13 @@ independentemente de qual agente estiver lendo este arquivo.
 | [`workbox-api/`](workbox-api/) | Identidade/autenticação — emite os JWTs (`POST /api/auth/login`) |
 | [`budget-service/`](budget-service/) | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api (segredo HS256 compartilhado, sem login próprio) |
 
+**Banco**: um Postgres único (`workbox`), **um schema por microserviço** — não
+banco-por-serviço (ver [README raiz](README.md#rodando-localmente)). Cada serviço tem
+seu próprio role Postgres, dono só do seu schema, sem `CREATE` no banco e sem acesso ao
+schema de outro serviço. Um microserviço novo precisa: role + schema em `initdb/` na
+raiz, `DATABASE_URL` apontando pro mesmo banco `workbox`, credenciais do role próprio —
+nunca reusar role de outro serviço nem o superusuário `postgres`.
+
 ## Frontend — `workbox-app/`
 - Agente: **Antigravity** (regras globais em `~/GEMINI.md` do desenvolvedor, copiadas em
   [`workbox-app/GEMINI.md`](workbox-app/GEMINI.md) pelo mesmo motivo).

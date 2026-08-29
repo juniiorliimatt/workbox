@@ -64,10 +64,25 @@ instalado), Node.js e PostgreSQL local (ou só o profile `test` de cada serviço
 H2 em memória e não depende de Postgres).
 
 Postgres via `docker-compose.yml` na raiz — Postgres 18, porta **5433** (não 5432,
-pra não colidir com algum outro Postgres já rodando na máquina). `initdb/` provisiona
-os databases `workbox`/`budget` e os schemas (`api`, `api_liquibase`, `budget`) na
-primeira subida (só roda em volume vazio — se já tiver `.pgdata/`, rode os scripts de
-`initdb/` manualmente com `psql`).
+pra não colidir com algum outro Postgres já rodando na máquina). **Banco único**
+(`workbox`), **um schema por microserviço** — não banco-por-serviço. `initdb/`
+provisiona, na primeira subida (só roda em volume vazio):
+
+- Extensões (`pgcrypto`, `uuid-ossp`) — instaladas uma vez pelo superusuário, os
+  changesets de Liquibase que tentam recriá-las viram no-op.
+- Um role Postgres por microserviço (`workbox_api`, `budget_service`), **dono só do seu
+  próprio schema** — sem `CREATE` no banco, sem acesso a schema de outro serviço
+  (confirmado: `SELECT` cross-schema dá `permission denied`). Cada app se conecta com o
+  role do seu próprio serviço, nunca com o superusuário `postgres`.
+- Os schemas (`api`, `api_liquibase` para o workbox-api; `budget` para o budget-service).
+
+Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
+(nessa ordem: `00`, `01`, `02`).
+
+**Próximo microserviço**: crie um role + schema seguindo o mesmo padrão em
+`initdb/`, aponte `DATABASE_URL` pro mesmo banco (`workbox`) e use
+`POSTGRES_USER`/`POSTGRES_PASSWORD` do role novo — nunca reuse o role de outro serviço
+nem o superusuário.
 
 ```bash
 docker compose up -d
@@ -78,7 +93,7 @@ DATABASE_URL=jdbc:postgresql://localhost:5433/workbox ./gradlew bootRun
 
 # budget-service (8081) — resource server, precisa de um JWT do workbox-api
 cd budget-service
-DATABASE_URL=jdbc:postgresql://localhost:5433/budget ./gradlew bootRun
+DATABASE_URL=jdbc:postgresql://localhost:5433/workbox ./gradlew bootRun
 
 # frontend
 cd workbox-app
