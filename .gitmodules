@@ -1,9 +1,9 @@
 [submodule "workbox-app"]
 	path = workbox-app
-	url = git@gitlab.com:projetos-pessoais15/workbox-app.git
+	url = git@gitlab.com:sonar-group-oojuniiin/workbox-app.git
 [submodule "workbox-api"]
 	path = workbox-api
-	url = git@gitlab.com:projetos-pessoais15/workbox-api.git
+	url = git@gitlab.com:sonar-group-oojuniiin/workbox-api.git
 [submodule "budget-service"]
 	path = budget-service
-	url = git@gitlab.com:projetos-pessoais15/budget-service.git
+	url = git@gitlab.com:sonar-group-oojuniiin/budget-service.git

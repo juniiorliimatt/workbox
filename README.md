@@ -18,7 +18,7 @@ monólito — pra praticar fronteira de deploy/versionamento real entre serviço
 submodules (ver `.gitmodules`).
 
 ```bash
-git clone --recurse-submodules git@gitlab.com:projetos-pessoais15/workbox.git
+git clone --recurse-submodules git@gitlab.com:sonar-group-oojuniiin/workbox.git
 # ou, se já clonou sem --recurse-submodules:
 git submodule update --init --recursive
 ```
