@@ -22,6 +22,12 @@ independentemente de qual agente estiver lendo este arquivo.
 | [`workbox-api/`](workbox-api/) | Identidade/autenticação — emite os JWTs (`POST /api/auth/login`) |
 | [`budget-service/`](budget-service/) | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api (segredo HS256 compartilhado, sem login próprio) |
 
+**Nomenclatura**: só o `workbox-api` leva sufixo `-api` — é o único ponto de entrada/
+emissor de identidade do sistema. Todo microserviço novo (domínio downstream, resource
+server) leva sufixo `-service` (repo, role Postgres, schema), seguindo o padrão de
+`budget-service`/`budget_service`. Decisão de nomenclatura fixada — não renomear
+`workbox-api` nem introduzir `-api` em serviços novos.
+
 **Banco**: um Postgres único (`workbox`), **um schema por microserviço** — não
 banco-por-serviço (ver [README raiz](README.md#rodando-localmente)). Cada serviço tem
 seu próprio role Postgres, dono só do seu schema, sem `CREATE` no banco e sem acesso ao
