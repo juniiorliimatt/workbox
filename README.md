@@ -57,6 +57,14 @@ formalizadas em **[AGENTS.md](AGENTS.md)**.
 que a API expõe, consumido pelo frontend e por agentes de IA. Detalhes de como
 regenerá-lo estão no [README do workbox-api](workbox-api/README.md#contrato-de-api-openapi).
 
+## Testes BDD (Cucumber)
+
+Convenção pros backends: cenário de negócio (`.feature`, Gherkin) escrito *antes* da
+implementação — fluxo outside-in documentado com diagrama em
+[`workbox-api/README.md#bdd-com-cucumber--fluxo-de-implementação`](workbox-api/README.md#bdd-com-cucumber--fluxo-de-implementação),
+que também tem o exemplo real (login). `budget-service` ainda não tem Cucumber
+configurado — ao adicionar, seguir o mesmo padrão.
+
 ## Rodando localmente
 
 Pré-requisitos: JDK 26 (toolchain do Gradle resolve automaticamente se estiver
