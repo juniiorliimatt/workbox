@@ -74,7 +74,7 @@ provisiona, na primeira subida (só roda em volume vazio):
   próprio schema** — sem `CREATE` no banco, sem acesso a schema de outro serviço
   (confirmado: `SELECT` cross-schema dá `permission denied`). Cada app se conecta com o
   role do seu próprio serviço, nunca com o superusuário `postgres`.
-- Os schemas (`workbox`, `workbox_liquibase` para o workbox-api; `budget` para o budget-service).
+- Os schemas (`workbox para o workbox-api; `budget` para o budget-service).
 
 Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
 (nessa ordem: `00`, `01`, `02`).
