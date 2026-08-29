@@ -5,17 +5,27 @@ por um submódulo. Esta divisão é uma decisão de projeto — respeite os limi
 independentemente de qual agente estiver lendo este arquivo.
 
 ## Backend — um repo/submódulo por microserviço
-- Agente: **Claude Code** (regras globais em `~/.claude/CLAUDE.md` do desenvolvedor,
-  copiadas em `CLAUDE.md` de cada submódulo backend para o projeto carregar as mesmas
-  instruções em qualquer máquina).
-- Escopo: API REST, domínio, persistência (JPA/Liquibase), segurança (Spring Security/JWT),
-  infra (Gradle, CI, Docker/deploy).
-- Não desenvolve UI/frontend.
 - Cada microserviço é um repositório GitLab próprio, adicionado como submódulo — **não**
   pacotes dentro de um monólito. Cada um com seu próprio deploy, versionamento e
   `openapi/openapi.yaml`. Ver [`workbox-api/README.md`](workbox-api/README.md) e
   [`budget-service/README.md`](budget-service/README.md) como referência de estrutura
   pro próximo serviço.
+- Escopo geral (ambos): API REST, domínio, persistência (JPA/Liquibase), segurança
+  (Spring Security/JWT), infra (Gradle, CI, Docker/deploy). Nenhum dos dois desenvolve
+  UI/frontend.
+
+### `workbox-api/` — implementação exclusiva do Claude Code
+- Responsabilidade de código é **só do Claude Code** — o desenvolvedor não escreve linha
+  de código neste repositório, apenas solicita mudanças/features.
+- Regras globais em `~/.claude/CLAUDE.md`, copiadas em [`workbox-api/CLAUDE.md`](workbox-api/CLAUDE.md).
+
+### `budget-service/` e demais serviços backend futuros — implementação do desenvolvedor
+- O desenvolvedor implementa sozinho. Claude Code atua **só como consultor**: análises,
+  recomendações, code review e exemplos de código a seguir — não escreve nem edita
+  código de produção diretamente nesses repositórios.
+- Regras globais em `~/.claude/CLAUDE.md`, copiadas em
+  [`budget-service/CLAUDE.md`](budget-service/CLAUDE.md), continuam valendo como padrão
+  de qualidade/convenções a apontar nas revisões — só a autoria de código muda de mãos.
 
 | Serviço | Papel |
 |---|---|
