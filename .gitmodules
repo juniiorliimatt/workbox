@@ -4,3 +4,6 @@
 [submodule "workbox-api"]
 	path = workbox-api
 	url = git@gitlab.com:oojuniin/workbox-api.git
+[submodule "budget-service"]
+	path = budget-service
+	url = git@gitlab.com:oojuniin/budget-service.git

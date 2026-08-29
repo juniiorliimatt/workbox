@@ -9,11 +9,13 @@ prioridade é ter um lugar central pra prototipar e aprender.
 
 | Submódulo | Papel | Stack | Docs |
 |---|---|---|---|
-| [`workbox-api`](workbox-api/) | Backend REST | Java 26, Spring Boot 3.5, Gradle 9, PostgreSQL/Liquibase, JWT | [README](workbox-api/README.md) |
+| [`workbox-api`](workbox-api/) | Backend — identidade/autenticação (emite JWT) | Java 26, Spring Boot 3.5, Gradle 9, PostgreSQL/Liquibase, JWT | [README](workbox-api/README.md) |
+| [`budget-service`](budget-service/) | Backend — finanças pessoais (*resource server*, valida JWT do workbox-api) | Java 26, Spring Boot 3.5, Gradle 9, PostgreSQL/Liquibase | [README](budget-service/README.md) |
 | [`workbox-app`](workbox-app/) | Frontend | React 18, TypeScript, Vite, MUI | [README](workbox-app/README.md) |
 
-São Git submodules (ver `.gitmodules`) — cada um é um repositório próprio no GitLab
-(`oojuniin/workbox-api`, `oojuniin/workbox-app`).
+Cada microserviço backend é um repositório GitLab próprio — não pacotes dentro de um
+monólito — pra praticar fronteira de deploy/versionamento real entre serviços. São Git
+submodules (ver `.gitmodules`).
 
 ```bash
 git clone --recurse-submodules git@gitlab.com:oojuniin/workbox.git
@@ -37,12 +39,16 @@ regenerá-lo estão no [README do workbox-api](workbox-api/README.md#contrato-de
 ## Rodando localmente
 
 Pré-requisitos: JDK 26 (toolchain do Gradle resolve automaticamente se estiver
-instalado — ver [README do workbox-api](workbox-api/README.md)), Node.js e PostgreSQL
-local (ou só o profile `test`, que usa H2 em memória e não depende de Postgres).
+instalado), Node.js e PostgreSQL local (ou só o profile `test` de cada serviço, que usa
+H2 em memória e não depende de Postgres).
 
 ```bash
-# backend
+# workbox-api (8080) — identidade
 cd workbox-api
+./gradlew bootRun
+
+# budget-service (8081) — resource server, precisa de um JWT do workbox-api
+cd budget-service
 ./gradlew bootRun
 
 # frontend
