@@ -23,6 +23,27 @@ git clone --recurse-submodules git@gitlab.com:oojuniin/workbox.git
 git submodule update --init --recursive
 ```
 
+## Espelho no GitHub / git hooks
+
+Cada repositório (este e os 3 submódulos) tem um espelho no GitHub
+(`juniiorliimatt/<repo>`), mantido em sincronia por um hook local — não é
+subtree/subtree-split, é o mesmo histórico enviado pros dois remotes. Depois de clonar,
+em cada repositório (raiz e cada submódulo):
+
+```bash
+git remote add github git@github.com:juniiorliimatt/<repo>.git
+git config core.hooksPath .githooks
+```
+
+Hooks em `.githooks/` (versionados, um conjunto idêntico em cada repositório):
+
+- **`pre-push`**: todo `git push` pro remote `origin` (GitLab) é automaticamente
+  espelhado pro remote `github`, ref por ref. Se o remote `github` não estiver
+  configurado, não faz nada (não quebra o push normal).
+- **`commit-msg`**: prefixa toda mensagem de commit com `[<branch>] - <versão> -`, onde
+  `<versão>` vem de `build.gradle` (Gradle) ou `package.json` (npm), ou `unversioned` se
+  nenhum existir. Não duplica em amend/merge.
+
 ## Divisão entre agentes de IA
 
 Este repositório é desenvolvido com dois agentes de IA em paralelo, cada um dono de um
