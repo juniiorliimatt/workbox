@@ -40,9 +40,9 @@ Hooks em `.githooks/` (versionados, um conjunto idêntico em cada repositório):
 - **`pre-push`**: todo `git push` pro remote `origin` (GitLab) é automaticamente
   espelhado pro remote `github`, ref por ref. Se o remote `github` não estiver
   configurado, não faz nada (não quebra o push normal).
-- **`commit-msg`**: prefixa toda mensagem de commit com `[<branch>] - <versão> -`, onde
-  `<versão>` vem de `build.gradle` (Gradle) ou `package.json` (npm), ou `unversioned` se
-  nenhum existir. Não duplica em amend/merge.
+- **`commit-msg`**: no-op — historicamente prefixava a mensagem com `[<branch>] - <versão> -`,
+  descontinuado (2026-08-29) já que o desenvolvimento agora vive numa branch fixa
+  (`develop`) e versão passou a ser identificada por tags Git, não por commit.
 
 ## Divisão entre agentes de IA
 

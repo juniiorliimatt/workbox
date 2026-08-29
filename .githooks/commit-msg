@@ -1,36 +1,6 @@
 #!/usr/bin/env bash
-# Prefixa a mensagem de commit com "[<branch>] - <versão> - ", sem duplicar em
-# amends/merges. Versão é lida de build.gradle (Gradle) ou package.json (npm);
-# se nenhum existir, usa "unversioned".
-commit_msg_file="$1"
-
-if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
-    exit 0
-fi
-
-branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "no-branch")
-
-version="unversioned"
-if [ -f build.gradle ]; then
-    version=$(grep -m1 -E "^version[[:space:]]*=" build.gradle | sed -E "s/version[[:space:]]*=[[:space:]]*['\"]([^'\"]+)['\"].*/\1/")
-elif [ -f package.json ]; then
-    version=$(grep -m1 '"version"' package.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
-fi
-[ -z "$version" ] && version="unversioned"
-
-prefix="[${branch}] - ${version} - "
-first_line=$(head -n1 "$commit_msg_file")
-
-case "$first_line" in
-    "${prefix}"*)
-        exit 0
-        ;;
-esac
-
-rest=$(tail -n +2 "$commit_msg_file")
-{
-    printf '%s%s\n' "$prefix" "$first_line"
-    printf '%s\n' "$rest"
-} > "$commit_msg_file"
-
+# Historicamente prefixava a mensagem de commit com "[<branch>] - <versão> - ".
+# Descontinuado (2026-08-29): branch de desenvolvimento agora é sempre "develop"
+# (sem valor informativo por commit), e versão passou a ser identificada por tags
+# Git, não por commit. Hook mantido como no-op — mensagens de commit ficam intactas.
 exit 0
