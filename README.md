@@ -133,6 +133,8 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `SPRING_PROFILE` | `dev` | `PROFILE_ACTIVE` passado pro `workbox-api` e pro `budget-service` (`dev`\|`prod`\|`test`). |
 | `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 — **tem que ser idêntico** nos dois backends (`workbox-api` emite, `budget-service` valida). |
 | `FRONT_PORT` | `5173` | Porta do `workbox-app` exposta no host. |
+| `WORKBOX_API_PORT` | `8080` | Porta do `workbox-api` exposta no host — pra testar direto (Postman, curl) sem passar pelo proxy do front. |
+| `BUDGET_SERVICE_PORT` | `8081` | Idem, pro `budget-service`. |
 
 ```bash
 cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcionam
