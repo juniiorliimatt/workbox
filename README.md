@@ -42,14 +42,21 @@ Pré-requisitos: JDK 26 (toolchain do Gradle resolve automaticamente se estiver
 instalado), Node.js e PostgreSQL local (ou só o profile `test` de cada serviço, que usa
 H2 em memória e não depende de Postgres).
 
+Postgres local (fora deste repo, `~/work/bases/docker-compose.yml`): serviço
+`db-postgres-workbox`, Postgres 18, porta **5433** (a 5432 já está ocupada por outro
+projeto na máquina) — databases `workbox` e `budget` já provisionados (schemas `api`,
+`api_liquibase`, `budget`).
+
 ```bash
+cd ~/work/bases && docker compose up -d db-postgres-workbox
+
 # workbox-api (8080) — identidade
 cd workbox-api
-./gradlew bootRun
+DATABASE_URL=jdbc:postgresql://localhost:5433/workbox ./gradlew bootRun
 
 # budget-service (8081) — resource server, precisa de um JWT do workbox-api
 cd budget-service
-./gradlew bootRun
+DATABASE_URL=jdbc:postgresql://localhost:5433/budget ./gradlew bootRun
 
 # frontend
 cd workbox-app
