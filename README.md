@@ -107,11 +107,13 @@ Cada submódulo tem seu próprio `Dockerfile` (multi-stage, usuário non-root) �
 compose up --build -d` na raiz sobe Postgres + `workbox-api` + `budget-service` +
 `workbox-app`, um comando só, sem precisar entrar em cada submódulo.
 
-`workbox-app` roda standalone nesse modo (diferente do `npm run build` nativo, que
-gera os estáticos dentro de `workbox-api/src/main/resources/static` pro modo
-embutido) — nginx serve os assets e faz proxy de `/api/*` pro `workbox-api` dentro da
-rede do compose, então o browser nunca precisa de CORS (mesmo origin do ponto de vista
-dele).
+`workbox-app` é standalone — nginx serve os assets buildados (`npm run build`, saída
+padrão em `dist/`) e faz proxy de `/api/*` pro `workbox-api` dentro da rede do compose,
+então o browser nunca precisa de CORS (mesmo origin do ponto de vista dele). Decisão
+tomada em 2026-08-29: existia um modo alternativo embutido (`vite build` gerando os
+estáticos direto em `workbox-api/src/main/resources/static`, servido pelo próprio
+Spring Boot) — descontinuado a favor do container isolado; `workbox-api` não serve
+mais SPA nenhum.
 
 Ordem de subida garantida por `depends_on: condition: service_healthy` — Postgres
 (`pg_isready`) antes dos backends, backends (`/actuator/health`, liberado sem
