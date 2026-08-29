@@ -100,3 +100,40 @@ cd workbox-app
 npm install
 npm run dev
 ```
+
+## Rodando tudo em containers
+
+Cada submódulo tem seu próprio `Dockerfile` (multi-stage, usuário non-root) — `docker
+compose up --build -d` na raiz sobe Postgres + `workbox-api` + `budget-service` +
+`workbox-app`, um comando só, sem precisar entrar em cada submódulo.
+
+`workbox-app` roda standalone nesse modo (diferente do `npm run build` nativo, que
+gera os estáticos dentro de `workbox-api/src/main/resources/static` pro modo
+embutido) — nginx serve os assets e faz proxy de `/api/*` pro `workbox-api` dentro da
+rede do compose, então o browser nunca precisa de CORS (mesmo origin do ponto de vista
+dele).
+
+Ordem de subida garantida por `depends_on: condition: service_healthy` — Postgres
+(`pg_isready`) antes dos backends, backends (`/actuator/health`, liberado sem
+autenticação nos dois) antes do front.
+
+**Java fixado em 26** nas 3 imagens (`ARG JAVA_VERSION` no topo de cada `Dockerfile`,
+mesma versão do `toolchain` em cada `build.gradle`) — mude nos três lugares juntos se
+atualizar, não deixe a versão flutuar entre serviços.
+
+Variáveis de ambiente (todas com default sensato — só precisa de `.env` pra
+sobrescrever; copie `.env.example` → `.env`, que é gitignored):
+
+| Variável | Default | Efeito |
+|---|---|---|
+| `POSTGRES_PORT` | `5433` | Porta do Postgres exposta no **host**. Dentro da rede docker os backends sempre falam com `postgres:5432` — isso nunca muda. |
+| `DB_HOST` | `postgres` | Host usado pelos backends pra montar `DATABASE_URL`. Só sobrescreva se apontar pra um Postgres fora do compose. |
+| `SPRING_PROFILE` | `dev` | `PROFILE_ACTIVE` passado pro `workbox-api` e pro `budget-service` (`dev`\|`prod`\|`test`). |
+| `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 — **tem que ser idêntico** nos dois backends (`workbox-api` emite, `budget-service` valida). |
+| `FRONT_PORT` | `5173` | Porta do `workbox-app` exposta no host. |
+
+```bash
+cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcionam
+docker compose up --build -d
+docker compose ps      # confirma os 4 serviços "healthy"
+```
