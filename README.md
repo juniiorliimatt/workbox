@@ -70,11 +70,11 @@ provisiona, na primeira subida (só roda em volume vazio):
 
 - Extensões (`pgcrypto`, `uuid-ossp`) — instaladas uma vez pelo superusuário, os
   changesets de Liquibase que tentam recriá-las viram no-op.
-- Um role Postgres por microserviço (`workbox_api`, `budget_service`), **dono só do seu
+- Um role Postgres por microserviço (`workbox_service`, `budget_service`), **dono só do seu
   próprio schema** — sem `CREATE` no banco, sem acesso a schema de outro serviço
   (confirmado: `SELECT` cross-schema dá `permission denied`). Cada app se conecta com o
   role do seu próprio serviço, nunca com o superusuário `postgres`.
-- Os schemas (`api`, `api_liquibase` para o workbox-api; `budget` para o budget-service).
+- Os schemas (`workbox`, `workbox_liquibase` para o workbox-api; `budget` para o budget-service).
 
 Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
 (nessa ordem: `00`, `01`, `02`).
