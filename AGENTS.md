@@ -51,6 +51,13 @@ nunca reusar role de outro serviço nem o superusuário `postgres`.
 - Escopo: componentes, styling, state management de tela, testes visuais.
 - Não desenvolve API/domínio/persistência.
 
+## Contas de teste (QA)
+
+Pra testar login/fluxos autenticados manualmente (Claude Code contra a API, Antigravity
+contra o front local) sem depender de conta real, existem duas contas fixas — credenciais
+e como recriá-las em [`workbox-api/README.md`](workbox-api/README.md#contas-de-teste-qa).
+Uso exclusivo dos dois agentes durante teste, nunca em demo pro usuário final.
+
 ## Contrato entre os lados
 
 Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yaml` — a
