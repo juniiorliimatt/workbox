@@ -54,6 +54,8 @@ services:
       - POSTGRES_PASSWORD=workbox_service
       - JWT_SECRET=${JWT_SECRET:?defina JWT_SECRET em .env.prod - gere com openssl rand -base64 32}
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:?defina FRONTEND_BASE_URL em .env.prod - por exemplo https://app.seudominio.com}
+    volumes:
+      - workbox_api_avatars:/app/uploads/avatars
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,3 +130,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  workbox_api_avatars:
