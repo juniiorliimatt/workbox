@@ -70,6 +70,38 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   demais são *resource servers* — validam o token com o mesmo segredo HS256
   (`JWT_SECRET`), sem reimplementar login.
 
+## Aviso de mudança de contrato pro Antigravity
+
+Claude Code e Antigravity não têm canal direto entre si — não há API, socket nem sessão
+compartilhada ligando os dois. O handoff é sempre manual, via o desenvolvedor.
+
+- Sempre que o Claude Code alterar o contrato do `workbox-api` (endpoint novo,
+  campo renomeado/removido/adicionado, mudança de tipo, mudança de auth requirement),
+  a resposta final da tarefa deve terminar com um bloco de resumo pronto pra
+  copiar e colar direto na conversa com o Antigravity — sem o desenvolvedor precisar
+  reescrever nada nem o Antigravity precisar caçar o diff sozinho.
+- Formato do bloco:
+
+  ```
+  ## Atualização de contrato — workbox-api
+
+  **O que mudou:** <1-2 frases>
+
+  **Endpoints afetados:**
+  - `MÉTODO /path` — <o que mudou nesse endpoint especificamente>
+
+  **Campos/DTOs (se aplicável):**
+  - antes: `campoAntigo` → depois: `campoNovo` (motivo em 1 frase)
+
+  **Ação necessária no front:** <o que o Antigravity precisa ajustar, em bullets>
+
+  **Contrato completo:** workbox-api/openapi/openapi.yaml (commit <hash curto>)
+  ```
+
+- Só gerar esse bloco quando a mudança afeta o **contrato observável** pelo client
+  (rota, payload, status code, auth). Refactor interno, mudança de schema de banco sem
+  reflexo na API, ou ajuste de teste não precisam de aviso.
+
 ## Convenção de mensagens de commit
 
 Vale pros dois agentes e pros quatro repositórios (raiz `workbox`, `workbox-api`,
