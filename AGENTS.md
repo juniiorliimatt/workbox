@@ -69,3 +69,29 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
 - Autenticação entre microserviços: `workbox-api` é o único que emite JWT (login). Os
   demais são *resource servers* — validam o token com o mesmo segredo HS256
   (`JWT_SECRET`), sem reimplementar login.
+
+## Convenção de mensagens de commit
+
+Vale pros dois agentes e pros quatro repositórios (raiz `workbox`, `workbox-api`,
+`budget-service`, `workbox-app`):
+
+- **Idioma**: sempre em português (pt-BR) — assunto e corpo. Só o prefixo de tipo
+  (Conventional Commits) e nomes técnicos/símbolos ficam em inglês, como já define
+  `~/.claude/CLAUDE.md` seção 1.
+- **Padrão** (Conventional Commits, tipo em inglês + descrição em português):
+
+  ```
+  <tipo>(<escopo opcional>): <descrição curta e objetiva em português>
+
+  <corpo opcional — o "porquê" da mudança, em português, quando não for óbvio>
+  ```
+
+  Tipos aceitos: `feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `style`, `perf`,
+  `ci`, `revert`. Exemplo:
+
+  ```
+  feat(auth): adiciona endpoint público de auto-cadastro
+
+  Permite que o usuário crie a própria conta pela tela de login, sempre
+  atribuindo a role USER no servidor (nunca confia em role vinda do payload).
+  ```
