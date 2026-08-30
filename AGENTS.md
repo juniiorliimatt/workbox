@@ -29,7 +29,7 @@ independentemente de qual agente estiver lendo este arquivo.
 
 | Serviço | Papel |
 |---|---|
-| [`workbox-api/`](workbox-api/) | Identidade/autenticação — emite os JWTs (`POST /api/auth/login`) |
+| [`workbox-api/`](workbox-api/) | Identidade/autenticação — emite os JWTs (`POST /api/v1/auth/login`) |
 | [`budget-service/`](budget-service/) | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api (segredo HS256 compartilhado, sem login próprio) |
 
 **Nomenclatura**: só o `workbox-api` leva sufixo `-api` — é o único ponto de entrada/

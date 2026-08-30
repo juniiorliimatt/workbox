@@ -9,8 +9,8 @@ prioridade é ter um lugar central pra prototipar e aprender.
 
 | Submódulo | Papel | Stack | Docs |
 |---|---|---|---|
-| [`workbox-api`](workbox-api/) | Backend — identidade/autenticação (emite JWT) | Java 26, Spring Boot 3.5, Gradle 9, PostgreSQL/Liquibase, JWT | [README](workbox-api/README.md) |
-| [`budget-service`](budget-service/) | Backend — finanças pessoais (*resource server*, valida JWT do workbox-api) | Java 26, Spring Boot 3.5, Gradle 9, PostgreSQL/Liquibase | [README](budget-service/README.md) |
+| [`workbox-api`](workbox-api/) | Backend — identidade/autenticação (emite JWT) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase, JWT | [README](workbox-api/README.md) |
+| [`budget-service`](budget-service/) | Backend — finanças pessoais (*resource server*, valida JWT do workbox-api) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase | [README](budget-service/README.md) |
 | [`workbox-app`](workbox-app/) | Frontend | React 18, TypeScript, Vite, MUI | [README](workbox-app/README.md) |
 
 Cada microserviço backend é um repositório GitLab próprio — não pacotes dentro de um
@@ -67,7 +67,7 @@ configurado — ao adicionar, seguir o mesmo padrão.
 
 ## Rodando localmente
 
-Pré-requisitos: JDK 26 (toolchain do Gradle resolve automaticamente se estiver
+Pré-requisitos: JDK 25 LTS (toolchain do Gradle resolve automaticamente se estiver
 instalado), Node.js e PostgreSQL local (ou só o profile `test` de cada serviço, que usa
 H2 em memória e não depende de Postgres).
 
@@ -82,7 +82,7 @@ provisiona, na primeira subida (só roda em volume vazio):
   próprio schema** — sem `CREATE` no banco, sem acesso a schema de outro serviço
   (confirmado: `SELECT` cross-schema dá `permission denied`). Cada app se conecta com o
   role do seu próprio serviço, nunca com o superusuário `postgres`.
-- Os schemas (`workbox para o workbox-api; `budget` para o budget-service).
+- Os schemas (`workbox` para o workbox-api; `budget` para o budget-service).
 
 Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
 (nessa ordem: `00`, `01`, `02`).
@@ -127,9 +127,10 @@ Ordem de subida garantida por `depends_on: condition: service_healthy` — Postg
 (`pg_isready`) antes dos backends, backends (`/actuator/health`, liberado sem
 autenticação nos dois) antes do front.
 
-**Java fixado em 26** nas 3 imagens (`ARG JAVA_VERSION` no topo de cada `Dockerfile`,
-mesma versão do `toolchain` em cada `build.gradle`) — mude nos três lugares juntos se
-atualizar, não deixe a versão flutuar entre serviços.
+**Java 25 LTS** nos dois backends (`ARG JAVA_VERSION` em cada `Dockerfile` +
+`java.toolchain` em cada `build.gradle`) — mude nos quatro lugares juntos se atualizar,
+não deixe a versão flutuar entre serviços. `workbox-app` é Node 22 (`ARG NODE_VERSION`
+no `Dockerfile` do front), não imagem Java.
 
 Variáveis de ambiente (todas com default sensato — só precisa de `.env` pra
 sobrescrever; copie `.env.example` → `.env`, que é gitignored):
