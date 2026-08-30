@@ -1,0 +1,9 @@
+# TLS automático (Let's Encrypt) — só funciona com um domínio real apontando (registro A)
+# pro IP público da VPS antes de subir o compose; Caddy renova o certificado sozinho.
+{$API_DOMAIN} {
+	reverse_proxy workbox-api:8080
+}
+
+{$APP_DOMAIN} {
+	reverse_proxy workbox-app:8080
+}

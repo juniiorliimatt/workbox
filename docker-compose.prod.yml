@@ -1,0 +1,130 @@
+# Compose de produção — diferenças chave em relação ao docker-compose.yml de dev:
+#
+# 1. Secrets nunca têm default: toda variável sensível usa "${VAR:?mensagem}", o compose
+#    recusa subir se ela não estiver setada — em vez de silenciosamente cair no valor de
+#    estudo hardcoded no application.properties/initdb.
+# 2. Postgres não expõe porta pro host — só alcançável pela rede interna do compose.
+# 3. workbox-api/budget-service/workbox-app também não expõem porta pro host — só o
+#    Caddy fala com o mundo externo (TLS automático via Let's Encrypt, precisa de DNS
+#    real apontando pro IP da VPS antes de subir).
+#
+# Limitação aceita conscientemente: as senhas dos roles workbox_service/budget_service
+# continuam fixas em initdb/*.sql (não vêm de env var aqui) porque o Postgres não tem
+# nenhuma porta exposta ao host nem à internet — comprometer esse segredo exigiria já
+# ter RCE dentro da rede docker, cenário em que o segredo do Postgres deixa de ser o
+# problema principal. O segredo que de fato importa (JWT_SECRET, verificável por
+# qualquer client externo) é obrigatório via env var abaixo. Se quiser fechar esse
+# gap também, troque initdb/*.sql por um script .sh que leia as senhas de env vars.
+#
+# Uso:
+#   cp .env.prod.example .env.prod
+#   # edite .env.prod com os valores reais
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: workbox-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_SUPERUSER_PASSWORD:?defina POSTGRES_SUPERUSER_PASSWORD em .env.prod - senha forte para o superusuario postgres}
+      - POSTGRES_DB=workbox
+    volumes:
+      - ./.pgdata:/var/lib/postgresql
+      - ./initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
+  workbox-api:
+    build: ./workbox-api
+    container_name: workbox-api
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=prod
+      - PORT=8080
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/workbox
+      - POSTGRES_USER=workbox_service
+      - POSTGRES_PASSWORD=workbox_service
+      - JWT_SECRET=${JWT_SECRET:?defina JWT_SECRET em .env.prod - gere com openssl rand -base64 32}
+      - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:?defina FRONTEND_BASE_URL em .env.prod - por exemplo https://app.seudominio.com}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
+  budget-service:
+    build: ./budget-service
+    container_name: budget-service
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=prod
+      - PORT=8081
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/workbox
+      - POSTGRES_USER=budget_service
+      - POSTGRES_PASSWORD=budget_service
+      - JWT_SECRET=${JWT_SECRET:?defina JWT_SECRET em .env.prod}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
+  workbox-app:
+    build: ./workbox-app
+    container_name: workbox-app
+    restart: unless-stopped
+    environment:
+      - WORKBOX_API_UPSTREAM=http://workbox-api:8080
+    depends_on:
+      workbox-api:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128M }
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: workbox-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - API_DOMAIN=${API_DOMAIN:?defina API_DOMAIN em .env.prod - por exemplo api.seudominio.com}
+      - APP_DOMAIN=${APP_DOMAIN:?defina APP_DOMAIN em .env.prod - por exemplo app.seudominio.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - workbox-api
+      - workbox-app
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128M }
+
+volumes:
+  caddy_data:
+  caddy_config:
