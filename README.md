@@ -140,7 +140,8 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `POSTGRES_PORT` | `5433` | Porta do Postgres exposta no **host**. Dentro da rede docker os backends sempre falam com `postgres:5432` — isso nunca muda. |
 | `DB_HOST` | `postgres` | Host usado pelos backends pra montar `DATABASE_URL`. Só sobrescreva se apontar pra um Postgres fora do compose. |
 | `SPRING_PROFILE` | `dev` | `PROFILE_ACTIVE` passado pro `workbox-api` e pro `budget-service` (`dev`\|`prod`\|`test`). |
-| `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 — **tem que ser idêntico** nos dois backends (`workbox-api` emite, `budget-service` valida). |
+| `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 — **tem que ser idêntico** nos dois backends (`workbox-api` emite, `budget-service` valida). Fica obsoleto assim que o `budget-service` migrar pra introspecção via `workbox-api` (ver [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md)). |
+| `INTROSPECTION_CLIENT_ID` / `INTROSPECTION_CLIENT_SECRET` | `budget-service` / `introspect-dev-secret-change-me` | Client credentials que o `budget-service` usa (HTTP Basic) pra chamar `POST /api/v1/auth/introspect` no `workbox-api` — tem que bater com uma linha ativa em `workbox.api_clients` (ver README do `workbox-api`). |
 | `FRONT_PORT` | `5173` | Porta do `workbox-app` exposta no host. |
 | `WORKBOX_API_PORT` | `8080` | Porta do `workbox-api` exposta no host — pra testar direto (Postman, curl) sem passar pelo proxy do front. |
 | `BUDGET_SERVICE_PORT` | `8081` | Idem, pro `budget-service`. |
@@ -150,3 +151,91 @@ cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcio
 docker compose up --build -d
 docker compose ps      # confirma os 4 serviços "healthy"
 ```
+
+## Deploy futuro no GCP (planejado, não implementado)
+
+Decisão registrada em 2026-08-31 pra quando o deploy real for feito — não precisa ficar
+online o tempo todo, só quando for usar. Documentado aqui pra não redescutir do zero na
+hora de executar. Comparado com Azure Container Apps e AWS (App Runner/Fargate/Lambda)
+antes de fechar — GCP venceu por ter scale-to-zero nativo por request (Azure também tem,
+mas com Postgres mais problemático) e um free tier "always free" de verdade, não só nos
+primeiros 12 meses (diferencial vs. AWS).
+
+### Serviço escolhido: Google Cloud Run
+
+Scale-to-zero automático por request desde o desenho do produto (`min-instances=0`,
+sem precisar de orquestração própria como seria no AWS Fargate). Cold start menor que os
+concorrentes pra JVM (tem CPU boost específico de startup). Descartado: Cloud Run não
+resolve workload stateful (Postgres) — ver abaixo.
+
+### Arquitetura alvo
+
+- `workbox-api`, `budget-service`, `workbox-app` → 3 serviços Cloud Run separados,
+  `min-instances=0`, cada um com sua imagem.
+- **Postgres**: **não** em Cloud Run (sem suporte adequado a disco persistente/POSIX
+  pra um banco relacional) e **não** em Cloud SQL (não escala a zero, fica cobrando
+  mesmo ocioso). Em vez disso, uma VM `e2-micro` no **Always Free tier** (região
+  `us-central1`, `us-west1` ou `us-east1` — só nessas o e2-micro é gratuito pra sempre),
+  rodando o Postgres via Docker direto, ligada 24/7 sem custo. Resolve o problema de
+  persistência sem precisar que o Postgres escale a zero.
+- **Registry de imagens**: Artifact Registry (free tier de 0,5GB, suficiente pras 3
+  imagens) ou GHCR, já que os repos são espelhados no GitHub (ver [Espelho no
+  GitHub](#espelho-no-github--git-hooks)).
+
+### Passo a passo
+
+```bash
+# 1. Projeto + APIs necessárias
+gcloud projects create workbox-prod --set-as-default
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com compute.googleapis.com
+
+# 2. Repositório no Artifact Registry + build/push das 3 imagens de app
+gcloud artifacts repositories create workbox --repository-format=docker --location=us-central1
+gcloud auth configure-docker us-central1-docker.pkg.dev
+
+docker build -t us-central1-docker.pkg.dev/workbox-prod/workbox/workbox-api:latest ./workbox-api
+docker push us-central1-docker.pkg.dev/workbox-prod/workbox/workbox-api:latest
+# ... idem workbox-app e budget-service
+
+# 3. Deploy de cada serviço com scale-to-zero
+gcloud run deploy workbox-api \
+  --image us-central1-docker.pkg.dev/workbox-prod/workbox/workbox-api:latest \
+  --region us-central1 --min-instances=0 --max-instances=1 \
+  --set-env-vars DATABASE_URL=jdbc:postgresql://<ip-da-vm>:5432/workbox
+# ... idem budget-service e workbox-app (com a URL do workbox-api já publicada)
+
+# 4. VM Always Free pro Postgres (região elegível, tipo exato do free tier)
+gcloud compute instances create workbox-postgres \
+  --zone=us-central1-a --machine-type=e2-micro \
+  --image-family=debian-12 --image-project=debian-cloud \
+  --boot-disk-size=30GB --boot-disk-type=pd-standard
+
+# na VM: instalar Docker e subir o Postgres com o initdb/ atual do repo
+# (mesma imagem/scripts já usados no docker-compose.yml local)
+```
+
+### O que NÃO fazer
+
+- **Não** rodar o Postgres em Cloud Run — sem garantia de disco persistente adequado
+  pra um banco relacional (GCS FUSE não é POSIX-safe pra isso).
+- **Não** usar Cloud SQL "pra ser mais gerenciado" — não escala a zero, fica cobrando
+  mesmo com uso esporádico; o `e2-micro` Always Free já resolve isso de graça.
+- **Não** criar a VM Always Free fora de `us-central1`/`us-west1`/`us-east1` — fora
+  dessas regiões o `e2-micro` deixa de ser gratuito e passa a cobrar normal.
+- **Não** deixar a VM do Postgres exposta na internet pública sem firewall restritivo —
+  liberar a porta 5432 só pro IP/range do Cloud Run (via VPC connector) ou usar Cloud
+  SQL Auth Proxy-like tunneling; nunca `0.0.0.0/0` na regra de firewall.
+- **Não** assumir que o cold start é instantâneo — primeira request após período
+  ocioso leva alguns segundos; não é adequado pra uma API que precise responder sempre
+  "a quente".
+- **Não** commitar `JWT_SECRET`/credenciais reais em `.env` nem em variável de ambiente
+  direto no manifest do Cloud Run — usar Secret Manager na hora do deploy real.
+
+### Custo esperado
+
+Cloud Run: free tier "always free" (2M requests/mês + 180k vCPU-s + 360k GiB-s) cobre
+uso esporádico de estudo com folga — tendência de ~$0/mês pros 3 serviços de app. VM
+`e2-micro` Always Free: $0/mês fixo (dentro do limite de 1 instância, nas regiões
+elegíveis), cobrindo o Postgres rodando 24/7 sem precisar resolver scale-to-zero pra ele.
+Trade-off aceito: latência maior pro Brasil (região é americana, não há Always Free em
+`southamerica-east1`). Valores públicos do GCP são em USD.
