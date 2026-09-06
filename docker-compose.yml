@@ -59,7 +59,16 @@ services:
       - DATABASE_URL=jdbc:postgresql://${DB_HOST:-postgres}:5432/workbox
       - POSTGRES_USER=budget_service
       - POSTGRES_PASSWORD=budget_service
+      # JWT_SECRET some daqui assim que o budget-service migrar pra introspecção via
+      # workbox-api (ver AGENTS.md) — deixa de decodificar o JWT localmente, então deixa
+      # de precisar conhecer o segredo compartilhado.
       - JWT_SECRET=${JWT_SECRET}
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      # Client credentials pro budget-service se autenticar em /api/v1/auth/introspect —
+      # tem que bater com uma linha ativa em workbox-api.api_clients (ver changelog
+      # 260906_0000_create_table_api_clients.sql; a seed padrão já usa esses defaults).
+      - INTROSPECTION_CLIENT_ID=${INTROSPECTION_CLIENT_ID:-budget-service}
+      - INTROSPECTION_CLIENT_SECRET=${INTROSPECTION_CLIENT_SECRET:-introspect-dev-secret-change-me}
     ports:
       - "${BUDGET_SERVICE_PORT:-8081}:8081"
     depends_on:

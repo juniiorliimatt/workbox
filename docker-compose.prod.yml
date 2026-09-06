@@ -79,7 +79,15 @@ services:
       - DATABASE_URL=jdbc:postgresql://postgres:5432/workbox
       - POSTGRES_USER=budget_service
       - POSTGRES_PASSWORD=budget_service
+      # JWT_SECRET some daqui assim que o budget-service migrar pra introspecção via
+      # workbox-api (ver AGENTS.md) — deixa de decodificar o JWT localmente.
       - JWT_SECRET=${JWT_SECRET:?defina JWT_SECRET em .env.prod}
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      # Tem que bater com uma linha ativa em workbox-api.api_clients — em prod, insira
+      # o cliente real via changeset novo (nunca reuse o hash de exemplo do dev) e
+      # sete o mesmo secret em texto plano aqui.
+      - INTROSPECTION_CLIENT_ID=${INTROSPECTION_CLIENT_ID:?defina INTROSPECTION_CLIENT_ID em .env.prod}
+      - INTROSPECTION_CLIENT_SECRET=${INTROSPECTION_CLIENT_SECRET:?defina INTROSPECTION_CLIENT_SECRET em .env.prod - gere com openssl rand -base64 32}
     depends_on:
       postgres:
         condition: service_healthy
