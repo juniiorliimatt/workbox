@@ -155,7 +155,7 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `POSTGRES_PORT` | `5433` | Porta do Postgres exposta no **host**. Dentro da rede docker os backends sempre falam com `postgres:5432` — isso nunca muda. |
 | `DB_HOST` | `postgres` | Host usado pelos backends pra montar `DATABASE_URL`. Só sobrescreva se apontar pra um Postgres fora do compose. |
 | `SPRING_PROFILE` | `dev` | `PROFILE_ACTIVE` passado pro `workbox-api` e pro `budget-service` (`dev`\|`prod`\|`test`). |
-| `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 — **tem que ser idêntico** nos dois backends (`workbox-api` emite, `budget-service` valida). Fica obsoleto assim que o `budget-service` migrar pra introspecção via `workbox-api` (ver [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md)). |
+| `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 usado só pelo `workbox-api`, que assina os access tokens na emissão (login). `budget-service` não conhece esse segredo — valida token via introspecção remota (ver [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md)). |
 | `INTROSPECTION_CLIENT_ID` / `INTROSPECTION_CLIENT_SECRET` | `budget-service` / `introspect-dev-secret-change-me` | Client credentials que o `budget-service` usa (HTTP Basic) pra chamar `POST /api/v1/auth/introspect` no `workbox-api` — tem que bater com uma linha ativa em `workbox.api_clients` (ver README do `workbox-api`). |
 | `FRONT_PORT` | `5173` | Porta do `workbox-app` exposta no host. |
 | `WORKBOX_API_PORT` | `8080` | Porta do `workbox-api` exposta no host — pra testar direto (Postman, curl) sem passar pelo proxy do front. |

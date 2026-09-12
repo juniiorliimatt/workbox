@@ -22,14 +22,13 @@ Depois desses 3 passos, a validação de token passa a funcionar automaticamente
 **todo** endpoint protegido do serviço — sem precisar chamar nada manualmente em cada
 controller.
 
-## Estado atual (2026-09-06): só o `workbox-api` está pronto
+## Estado atual (atualizado em 2026-09-12): migração concluída
 
-O `budget-service` **ainda não foi migrado** — continua decodificando o JWT localmente
-(`JwtDecoder`/`NimbusJwtDecoder` + `jwt.secret` compartilhado). O `RestClient` do
-`OpaqueTokenIntrospector` de exemplo só existe como código sugerido no doc de migração,
-não como implementação real em nenhum repositório ainda — é o `budget-service` (código
-de responsabilidade do desenvolvedor, Claude Code só assessora) quem precisa aplicar o
-passo 3 pra essa peça passar a existir de fato.
+O `budget-service` já foi migrado — `SecurityConfig` usa `oauth2ResourceServer().opaqueToken(...)`
+com um `WorkboxTokenIntrospector` próprio, sem `JwtDecoder`/`jwt.secret` em lugar nenhum
+do código ou do `application.properties`. Validado ao vivo: token válido → `200`, token
+expirado/inválido → `401` com detalhe, e revogação por logout/troca de senha
+propagando corretamente (o ganho principal sobre decodificação local).
 
 ## O mecanismo, passo a passo (depois de implementado)
 

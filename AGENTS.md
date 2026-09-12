@@ -74,8 +74,11 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   serviço devem ser solicitadas ao dono daquele serviço, não assumidas/mockadas
   silenciosamente.
 - Autenticação entre microserviços: `workbox-api` é o único que emite JWT (login). Os
-  demais são *resource servers* — validam o token com o mesmo segredo HS256
-  (`JWT_SECRET`), sem reimplementar login.
+  demais são *resource servers* — validam o token via introspecção remota
+  (`POST /api/v1/auth/introspect`, client credentials cadastrados na tabela
+  `workbox.api_clients`), sem decodificar o JWT localmente, sem conhecer `JWT_SECRET` e
+  sem reimplementar login. Ver
+  [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md).
 
 ## Aviso de mudança de contrato pro Antigravity
 
