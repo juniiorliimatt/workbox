@@ -51,6 +51,21 @@ submódulo — Claude Code no backend, Antigravity no frontend. A divisão de es
 regra de como os dois lados se alinham (via o contrato OpenAPI do backend) estão
 formalizadas em **[AGENTS.md](AGENTS.md)**.
 
+## Convenção de commits
+
+Vale pros dois agentes de IA e pro desenvolvedor, nos quatro repositórios deste monorepo
+(este e os 3 submódulos) — sempre em português (pt-BR), Conventional Commits com o
+prefixo de tipo em inglês:
+
+```
+<tipo>(<escopo opcional>): <descrição curta e objetiva em português>
+```
+
+Tipos aceitos: `feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `style`, `perf`, `ci`,
+`revert`. Diverge de propósito do default do `~/.claude/CLAUDE.md`/`~/GEMINI.md` globais
+do usuário (que pedem inglês) — regra completa e exemplo em
+[AGENTS.md](AGENTS.md#convenção-de-mensagens-de-commit).
+
 ## Contrato de API
 
 `workbox-api/openapi/openapi.yaml` é o contrato REST versionado — fonte da verdade do

@@ -115,8 +115,12 @@ Vale pros dois agentes e pros quatro repositórios (raiz `workbox`, `workbox-api
 `budget-service`, `workbox-app`):
 
 - **Idioma**: sempre em português (pt-BR) — assunto e corpo. Só o prefixo de tipo
-  (Conventional Commits) e nomes técnicos/símbolos ficam em inglês, como já define
-  `~/.claude/CLAUDE.md` seção 1.
+  (Conventional Commits) e nomes técnicos/símbolos ficam em inglês. Diverge de propósito
+  do default do `~/.claude/CLAUDE.md`/`~/GEMINI.md` globais do usuário (que pedem
+  mensagem de commit em inglês) — esta convenção tem precedência nos quatro repositórios
+  deste monorepo, replicada explicitamente na seção "Idioma" de cada `CLAUDE.md`/
+  `GEMINI.md` copiado (`workbox-api/CLAUDE.md`, `budget-service/CLAUDE.md`,
+  `workbox-app/GEMINI.md`).
 - **Padrão** (Conventional Commits, tipo em inglês + descrição em português):
 
   ```
