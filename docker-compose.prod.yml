@@ -54,6 +54,13 @@ services:
       - POSTGRES_PASSWORD=workbox_service
       - JWT_SECRET=${JWT_SECRET:?defina JWT_SECRET em .env.prod - gere com openssl rand -base64 32}
       - FRONTEND_BASE_URL=${FRONTEND_BASE_URL:?defina FRONTEND_BASE_URL em .env.prod - por exemplo https://app.seudominio.com}
+      # Opcional (sem default:? de propósito): sem isso, /forgot-password continua
+      # respondendo 204 normalmente, mas o e-mail nunca é entregue de verdade — só logado.
+      - MAIL_HOST=${MAIL_HOST:-localhost}
+      - MAIL_PORT=${MAIL_PORT:-25}
+      - MAIL_USERNAME=${MAIL_USERNAME:-}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-}
+      - MAIL_FROM=${MAIL_FROM:-no-reply@workbox.local}
     volumes:
       - workbox_api_avatars:/app/uploads/avatars
     depends_on:
