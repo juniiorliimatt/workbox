@@ -56,11 +56,14 @@ Criar `br.com.budget.config.WorkboxTokenIntrospector`:
 ```java
 package br.com.budget.config;
 
+import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 import org.springframework.security.oauth2.server.resource.introspection.BadOpaqueTokenException;
@@ -69,6 +72,7 @@ import org.springframework.security.oauth2.server.resource.introspection.OAuth2I
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 public class WorkboxTokenIntrospector implements OpaqueTokenIntrospector {
 
@@ -92,14 +96,18 @@ public class WorkboxTokenIntrospector implements OpaqueTokenIntrospector {
 
         Map<String, Object> result;
         try {
+            // ParameterizedTypeReference em vez de Map.class: Map.class é um Class raw, sem
+            // informação genérica — o retorno viraria Map bruto, gerando unchecked assignment
+            // ao atribuir em Map<String, Object>. ParameterizedTypeReference preserva o tipo
+            // genérico de verdade pro Jackson desserializar.
             result = restClient.post()
                     .uri(introspectionUri)
                     .headers(headers -> headers.setBasicAuth(clientId, clientSecret))
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(body)
                     .retrieve()
-                    .body(Map.class);
-        } catch (Exception e) {
+                    .body(new ParameterizedTypeReference<Map<String, Object>>() { });
+        } catch (RestClientException e) {
             throw new BadOpaqueTokenException("Falha ao consultar introspecção no workbox-api", e);
         }
 
@@ -107,11 +115,29 @@ public class WorkboxTokenIntrospector implements OpaqueTokenIntrospector {
             throw new BadOpaqueTokenException("Token inativo");
         }
 
+        // OpaqueTokenAuthenticationProvider (Spring Security) lê a claim "exp" do mapa de
+        // atributos com um cast direto pra Instant — (Instant) attributes.get("exp") — sem
+        // converter a partir de epoch-seconds. O workbox-api devolve "exp" como número JSON
+        // puro, que o Jackson desserializa como Integer/Long dentro do Map<String,Object> —
+        // sem essa conversão, todo token VÁLIDO (o único caminho que chega até aqui) derruba
+        // um ClassCastException dentro do próprio Spring, disfarçado de 401 genérico.
+        Map<String, Object> attributes = new HashMap<>(result);
+        Object exp = attributes.get("exp");
+        if (exp instanceof Number number) {
+            attributes.put("exp", Instant.ofEpochSecond(number.longValue()));
+        }
+
         @SuppressWarnings("unchecked")
         List<String> roles = (List<String>) result.getOrDefault("roles", List.of());
-        var authorities = roles.stream().map(SimpleGrantedAuthority::new).toList();
+        // .<GrantedAuthority>map(...) força o tipo do Stream — sem isso, toList() infere
+        // List<SimpleGrantedAuthority>, que não é atribuível a Collection<GrantedAuthority>
+        // (generics em Java são invariantes, mesmo SimpleGrantedAuthority implementando
+        // GrantedAuthority).
+        Collection<GrantedAuthority> authorities = roles.stream()
+                .<GrantedAuthority>map(SimpleGrantedAuthority::new)
+                .toList();
 
-        return new OAuth2IntrospectionAuthenticatedPrincipal((String) result.get("sub"), result, authorities);
+        return new OAuth2IntrospectionAuthenticatedPrincipal((String) result.get("sub"), attributes, authorities);
     }
 }
 ```
