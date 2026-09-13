@@ -112,5 +112,42 @@ services:
       resources:
         limits: { cpus: "0.5", memory: 128M }
 
+  # Backup/restore manual do Postgres (pg_dump/pg_restore --format=custom, todos os
+  # schemas). profiles: ["backup"] - nunca sobem com "docker compose up" normal, só
+  # via "docker compose --profile backup run --rm backup|restore" (ver README).
+  backup:
+    image: postgres:18
+    container_name: workbox-backup
+    profiles: ["backup"]
+    environment:
+      - PGHOST=${DB_HOST:-postgres}
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=workbox
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "/scripts/backup-db.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  restore:
+    image: postgres:18
+    container_name: workbox-restore
+    profiles: ["backup"]
+    environment:
+      - PGHOST=${DB_HOST:-postgres}
+      - PGUSER=postgres
+      - PGPASSWORD=postgres
+      - PGDATABASE=workbox
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "/scripts/restore-db.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   workbox_api_avatars:

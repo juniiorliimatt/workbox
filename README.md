@@ -167,6 +167,30 @@ docker compose up --build -d
 docker compose ps      # confirma os 4 serviços "healthy"
 ```
 
+## Backup e restore do banco
+
+`scripts/backup-db.sh`/`scripts/restore-db.sh` — `pg_dump`/`pg_restore --format=custom`
+(comprimido, permite restore seletivo), banco `workbox` inteiro, todos os schemas de
+uma vez (`workbox` do `workbox-api`, `budget` do `budget-service`). Rodam dentro de
+serviços dedicados do compose (`profiles: ["backup"]` — nunca sobem com `docker compose
+up` normal, só quando chamados explicitamente):
+
+```bash
+# Backup - grava em ./backups/workbox_<timestamp>.dump (gitignored, dado real nunca vai pro repo)
+docker compose --profile backup run --rm backup
+
+# Restore - path é dentro do container, onde ./backups do host vira /backups
+docker compose --profile backup run --rm restore /backups/workbox_20260913_120000.dump
+```
+
+Restore usa `--clean --if-exists`: sobrescreve os objetos existentes que colidirem com
+o backup, não faz merge — confirme que está apontando pro Postgres certo antes de
+rodar (`PGHOST` default é `${DB_HOST:-postgres}`, o container do compose, não um banco
+remoto). Scripts pensados pra rodar sem editar nada na maioria dos casos — só
+sobrescrever `PGHOST`/`PGUSER`/`PGPASSWORD`/`PGDATABASE` via `environment:` no
+`docker-compose.yml` se precisar apontar pra outro banco (ex.: `docker-compose.prod.yml`
+usa o mesmo par usuário/banco `postgres`/`workbox`, só a senha muda).
+
 ## Deploy futuro no GCP (planejado, não implementado)
 
 Decisão registrada em 2026-08-31 pra quando o deploy real for feito — não precisa ficar
