@@ -96,6 +96,15 @@ services:
     depends_on:
       workbox-api:
         condition: service_healthy
+    healthcheck:
+      # 127.0.0.1, não localhost - a imagem alpine resolve localhost pra ::1 primeiro e
+      # o nginx só escuta em IPv4 (listen 8080, sem [::]:8080), então wget contra
+      # localhost falha com "connection refused" mesmo com o processo de pé.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     deploy:
       resources:
         limits: { cpus: "0.5", memory: 128M }
