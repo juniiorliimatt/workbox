@@ -8,7 +8,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=workbox
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT:-7050}:5432"
     volumes:
       - ./.pgdata:/var/lib/postgresql
       - ./initdb:/docker-entrypoint-initdb.d
@@ -38,7 +38,7 @@ services:
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-no-reply@workbox.local}
     ports:
-      - "${WORKBOX_API_PORT:-8080}:8080"
+      - "${WORKBOX_API_PORT:-7051}:8080"
     volumes:
       - workbox_api_avatars:/app/uploads/avatars
     depends_on:
@@ -71,7 +71,7 @@ services:
       - INTROSPECTION_CLIENT_ID=${INTROSPECTION_CLIENT_ID:-budget-service}
       - INTROSPECTION_CLIENT_SECRET=${INTROSPECTION_CLIENT_SECRET:-MyS3cur3Cli3ntS3cr3t!Budg3t!}
     ports:
-      - "${BUDGET_SERVICE_PORT:-8081}:8081"
+      - "${BUDGET_SERVICE_PORT:-7052}:8081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,7 +93,7 @@ services:
       - WORKBOX_API_UPSTREAM=http://workbox-api:8080
       - BUDGET_SERVICE_UPSTREAM=http://budget-service:8081
     ports:
-      - "${FRONT_PORT:-5173}:8080"
+      - "${FRONT_PORT:-7053}:8080"
     depends_on:
       workbox-api:
         condition: service_healthy

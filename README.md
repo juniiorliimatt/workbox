@@ -86,7 +86,7 @@ Pré-requisitos: JDK 25 LTS (toolchain do Gradle resolve automaticamente se esti
 instalado), Node.js e PostgreSQL local (ou só o profile `test` de cada serviço, que usa
 H2 em memória e não depende de Postgres).
 
-Postgres via `docker-compose.yml` na raiz — Postgres 18, porta **5433** (não 5432,
+Postgres via `docker-compose.yml` na raiz — Postgres 18, porta **7050** (não 5432,
 pra não colidir com algum outro Postgres já rodando na máquina). **Banco único**
 (`workbox`), **um schema por microserviço** — não banco-por-serviço. `initdb/`
 provisiona, na primeira subida (só roda em volume vazio):
@@ -110,18 +110,18 @@ nem o superusuário.
 ```bash
 docker compose up -d
 
-# workbox-api (8080) — identidade
+# workbox-api (7051) — identidade
 cd workbox-api
-DATABASE_URL=jdbc:postgresql://localhost:5433/workbox ./gradlew bootRun
+DATABASE_URL=jdbc:postgresql://localhost:7050/workbox ./gradlew bootRun
 
-# budget-service (8081) — resource server, precisa de um JWT do workbox-api
+# budget-service (7052) — resource server, precisa de um JWT do workbox-api
 cd budget-service
-DATABASE_URL=jdbc:postgresql://localhost:5433/workbox ./gradlew bootRun
+DATABASE_URL=jdbc:postgresql://localhost:7050/workbox ./gradlew bootRun
 
 # frontend
 cd workbox-app
 npm install
-npm run dev
+npm run dev   # http://localhost:7053
 ```
 
 ## Rodando tudo em containers
@@ -152,14 +152,14 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 
 | Variável | Default | Efeito |
 |---|---|---|
-| `POSTGRES_PORT` | `5433` | Porta do Postgres exposta no **host**. Dentro da rede docker os backends sempre falam com `postgres:5432` — isso nunca muda. |
+| `POSTGRES_PORT` | `7050` | Porta do Postgres exposta no **host**. Dentro da rede docker os backends sempre falam com `postgres:5432` — isso nunca muda. |
 | `DB_HOST` | `postgres` | Host usado pelos backends pra montar `DATABASE_URL`. Só sobrescreva se apontar pra um Postgres fora do compose. |
 | `SPRING_PROFILE` | `dev` | `PROFILE_ACTIVE` passado pro `workbox-api` e pro `budget-service` (`dev`\|`prod`\|`test`). |
 | `JWT_SECRET` | fallback de `application.properties` (só estudo local) | Segredo HS256 usado só pelo `workbox-api`, que assina os access tokens na emissão (login). `budget-service` não conhece esse segredo — valida token via introspecção remota (ver [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md)). |
 | `INTROSPECTION_CLIENT_ID` / `INTROSPECTION_CLIENT_SECRET` | `budget-service` / `introspect-dev-secret-change-me` | Client credentials que o `budget-service` usa (HTTP Basic) pra chamar `POST /api/v1/auth/introspect` no `workbox-api` — tem que bater com uma linha ativa em `workbox.api_clients` (ver README do `workbox-api`). |
-| `FRONT_PORT` | `5173` | Porta do `workbox-app` exposta no host. |
-| `WORKBOX_API_PORT` | `8080` | Porta do `workbox-api` exposta no host — pra testar direto (Postman, curl) sem passar pelo proxy do front. |
-| `BUDGET_SERVICE_PORT` | `8081` | Idem, pro `budget-service`. |
+| `FRONT_PORT` | `7053` | Porta do `workbox-app` exposta no host. |
+| `WORKBOX_API_PORT` | `7051` | Porta do `workbox-api` exposta no host — pra testar direto (Postman, curl) sem passar pelo proxy do front. |
+| `BUDGET_SERVICE_PORT` | `7052` | Idem, pro `budget-service`. |
 
 ```bash
 cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcionam

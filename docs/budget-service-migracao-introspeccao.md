@@ -37,7 +37,7 @@ Adicionar (removendo `jwt.secret` só no Passo 5, depois de validar que a migra�
 funciona):
 
 ```properties
-introspection.uri=${INTROSPECTION_URI:http://localhost:8080/api/v1/auth/introspect}
+introspection.uri=${INTROSPECTION_URI:http://localhost:7051/api/v1/auth/introspect}
 introspection.client-id=${INTROSPECTION_CLIENT_ID:budget-service}
 introspection.client-secret=${INTROSPECTION_CLIENT_SECRET:introspect-dev-secret-change-me}
 ```
@@ -222,6 +222,6 @@ sem passar pelo filtro real.
   adicionar cache no futuro por performance — do contrário logout/revogação (o ganho
   principal desta migração) fica mascarado até o cache expirar.
 - **Não** apontar `introspection.uri` pra um valor sem fallback de dev — sem
-  `INTROSPECTION_URI` setado, o default `http://localhost:8080/...` só funciona rodando
+  `INTROSPECTION_URI` setado, o default `http://localhost:7051/...` só funciona rodando
   os dois serviços fora de container; dentro do compose é sempre `http://workbox-api:8080/...`
-  (já wireado).
+  (já wireado — porta interna do container, não muda com a porta exposta no host).
