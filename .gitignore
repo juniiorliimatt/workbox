@@ -1,4 +1,5 @@
 .pgdata/
+.mongodata/
 .env
 .env.prod
 .idea/

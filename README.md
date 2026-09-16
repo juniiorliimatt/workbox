@@ -102,10 +102,15 @@ provisiona, na primeira subida (só roda em volume vazio):
 Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
 (nessa ordem: `00`, `01`, `02`).
 
-**Próximo microserviço**: crie um role + schema seguindo o mesmo padrão em
+**Próximo microserviço relacional**: crie um role + schema seguindo o mesmo padrão em
 `initdb/`, aponte `DATABASE_URL` pro mesmo banco (`workbox`) e use
 `POSTGRES_USER`/`POSTGRES_PASSWORD` do role novo — nunca reuse o role de outro serviço
 nem o superusuário.
+
+MongoDB via o mesmo `docker-compose.yml` — porta **7054**, usado pelo `notes-service`
+(schema livre por documento, sem migrations — ver README do serviço). Sem Postgres
+equivalente de role/schema por serviço: cada microserviço Mongo futuro usa seu próprio
+banco lógico dentro da mesma instância (`notes` hoje).
 
 ```bash
 docker compose up -d
@@ -118,6 +123,10 @@ DATABASE_URL=jdbc:postgresql://localhost:7050/workbox ./gradlew bootRun
 cd budget-service
 DATABASE_URL=jdbc:postgresql://localhost:7050/workbox ./gradlew bootRun
 
+# notes-service (7055) — resource server, precisa de um JWT do workbox-api
+cd notes-service
+MONGODB_URI=mongodb://localhost:7054/notes ./gradlew bootRun
+
 # frontend
 cd workbox-app
 npm install
@@ -127,8 +136,8 @@ npm run dev   # http://localhost:7053
 ## Rodando tudo em containers
 
 Cada submódulo tem seu próprio `Dockerfile` (multi-stage, usuário non-root) — `docker
-compose up --build -d` na raiz sobe Postgres + `workbox-api` + `budget-service` +
-`workbox-app`, um comando só, sem precisar entrar em cada submódulo.
+compose up --build -d` na raiz sobe Postgres + MongoDB + `workbox-api` + `budget-service`
++ `notes-service` + `workbox-app`, um comando só, sem precisar entrar em cada submódulo.
 
 `workbox-app` é standalone — nginx serve os assets buildados (`npm run build`, saída
 padrão em `dist/`) e faz proxy de `/api/*` pro `workbox-api` dentro da rede do compose,
@@ -142,8 +151,8 @@ Ordem de subida garantida por `depends_on: condition: service_healthy` — Postg
 (`pg_isready`) antes dos backends, backends (`/actuator/health`, liberado sem
 autenticação nos dois) antes do front.
 
-**Java 25 LTS** nos dois backends (`ARG JAVA_VERSION` em cada `Dockerfile` +
-`java.toolchain` em cada `build.gradle`) — mude nos quatro lugares juntos se atualizar,
+**Java 25 LTS** nos três backends (`ARG JAVA_VERSION` em cada `Dockerfile` +
+`java.toolchain` em cada `build.gradle`) — mude nos seis lugares juntos se atualizar,
 não deixe a versão flutuar entre serviços. `workbox-app` é Node 22 (`ARG NODE_VERSION`
 no `Dockerfile` do front), não imagem Java.
 
@@ -160,11 +169,15 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `FRONT_PORT` | `7053` | Porta do `workbox-app` exposta no host. |
 | `WORKBOX_API_PORT` | `7051` | Porta do `workbox-api` exposta no host — pra testar direto (Postman, curl) sem passar pelo proxy do front. |
 | `BUDGET_SERVICE_PORT` | `7052` | Idem, pro `budget-service`. |
+| `MONGO_PORT` | `7054` | Porta do MongoDB exposta no **host**. Dentro da rede docker os backends sempre falam com `mongo:27017` — isso nunca muda. |
+| `MONGO_HOST` | `mongo` | Host usado pelo `notes-service` pra montar `MONGODB_URI`. Só sobrescreva se apontar pra um Mongo fora do compose. |
+| `NOTES_SERVICE_PORT` | `7055` | Idem, pro `notes-service`. |
+| `NOTES_INTROSPECTION_CLIENT_ID` / `NOTES_INTROSPECTION_CLIENT_SECRET` | `notes-service` / `MyS3cur3Cli3ntS3cr3t!N0tes!` | Idem, client credentials do `notes-service`. |
 
 ```bash
 cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcionam
 docker compose up --build -d
-docker compose ps      # confirma os 4 serviços "healthy"
+docker compose ps      # confirma os 6 serviços "healthy"
 ```
 
 ## Backup e restore do banco

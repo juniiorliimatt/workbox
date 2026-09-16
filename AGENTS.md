@@ -30,7 +30,8 @@ independentemente de qual agente estiver lendo este arquivo.
 | Serviço | Papel |
 |---|---|
 | [`workbox-api/`](workbox-api/) | Identidade/autenticação — emite os JWTs (`POST /api/v1/auth/login`) |
-| [`budget-service/`](budget-service/) | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api (segredo HS256 compartilhado, sem login próprio) |
+| [`budget-service/`](budget-service/) | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api via introspecção remota |
+| [`notes-service/`](notes-service/) | Notas/documentos pessoais (conteúdo livre, sem schema fixo) — *resource server*, mesmo padrão de introspecção. **MongoDB**, não Postgres — primeiro serviço do monorepo a usar um banco não-relacional |
 
 **Nomenclatura**: só o `workbox-api` leva sufixo `-api` — é o único ponto de entrada/
 emissor de identidade do sistema. Todo microserviço novo (domínio downstream, resource
@@ -38,12 +39,14 @@ server) leva sufixo `-service` (repo, role Postgres, schema), seguindo o padrão
 `budget-service`/`budget_service`. Decisão de nomenclatura fixada — não renomear
 `workbox-api` nem introduzir `-api` em serviços novos.
 
-**Banco**: um Postgres único (`workbox`), **um schema por microserviço** — não
+**Banco**: um Postgres único (`workbox`), **um schema por microserviço relacional** — não
 banco-por-serviço (ver [README raiz](README.md#rodando-localmente)). Cada serviço tem
 seu próprio role Postgres, dono só do seu schema, sem `CREATE` no banco e sem acesso ao
-schema de outro serviço. Um microserviço novo precisa: role + schema em `initdb/` na
-raiz, `DATABASE_URL` apontando pro mesmo banco `workbox`, credenciais do role próprio —
-nunca reusar role de outro serviço nem o superusuário `postgres`.
+schema de outro serviço. Um microserviço relacional novo precisa: role + schema em
+`initdb/` na raiz, `DATABASE_URL` apontando pro mesmo banco `workbox`, credenciais do
+role próprio — nunca reusar role de outro serviço nem o superusuário `postgres`. Serviço
+com dado genuinamente document-shaped (sem join, schema variável) usa MongoDB em vez de
+forçar relacional — ver `notes-service/`.
 
 ## Frontend — `workbox-app/`
 - Agente: **Antigravity** (regras globais em `~/GEMINI.md` do desenvolvedor, copiadas em

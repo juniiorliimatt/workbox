@@ -7,3 +7,7 @@
 [submodule "budget-service"]
 	path = budget-service
 	url = git@gitlab.com:sonar-group-oojuniiin/budget-service.git
+[submodule "notes-service"]
+	path = notes-service
+	url = git@gitlab.com:sonar-group-oojuniiin/notes-service.git
+	branch = develop
