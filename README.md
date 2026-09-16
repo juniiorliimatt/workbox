@@ -112,6 +112,10 @@ MongoDB via o mesmo `docker-compose.yml` — porta **7054**, usado pelo `notes-s
 equivalente de role/schema por serviço: cada microserviço Mongo futuro usa seu próprio
 banco lógico dentro da mesma instância (`notes` hoje).
 
+Redis via o mesmo `docker-compose.yml` — porta **7056**, usado só pelo `workbox-api`
+(refresh tokens: TTL nativo por chave, sem job de cleanup agendado — ver README do
+serviço). Sem volume: dado puramente efêmero, perder num restart só força re-login.
+
 ```bash
 docker compose up -d
 
@@ -136,8 +140,9 @@ npm run dev   # http://localhost:7053
 ## Rodando tudo em containers
 
 Cada submódulo tem seu próprio `Dockerfile` (multi-stage, usuário non-root) — `docker
-compose up --build -d` na raiz sobe Postgres + MongoDB + `workbox-api` + `budget-service`
-+ `notes-service` + `workbox-app`, um comando só, sem precisar entrar em cada submódulo.
+compose up --build -d` na raiz sobe Postgres + MongoDB + Redis + `workbox-api` +
+`budget-service` + `notes-service` + `workbox-app`, um comando só, sem precisar entrar em
+cada submódulo.
 
 `workbox-app` é standalone — nginx serve os assets buildados (`npm run build`, saída
 padrão em `dist/`) e faz proxy de `/api/*` pro `workbox-api` dentro da rede do compose,
@@ -173,11 +178,14 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `MONGO_HOST` | `mongo` | Host usado pelo `notes-service` pra montar `MONGODB_URI`. Só sobrescreva se apontar pra um Mongo fora do compose. |
 | `NOTES_SERVICE_PORT` | `7055` | Idem, pro `notes-service`. |
 | `NOTES_INTROSPECTION_CLIENT_ID` / `NOTES_INTROSPECTION_CLIENT_SECRET` | `notes-service` / `MyS3cur3Cli3ntS3cr3t!N0tes!` | Idem, client credentials do `notes-service`. |
+| `REDIS_PORT` | `7056` | Porta do Redis exposta no **host**. Dentro da rede docker o `workbox-api` sempre fala com `redis:6379` — isso nunca muda. |
+| `REDIS_HOST` | `redis` | Host usado pelo `workbox-api` pra montar a conexão Redis. Só sobrescreva se apontar pra um Redis fora do compose. |
+| `REDIS_PASSWORD` | `MyS3cur3R3disP@ssw0rd2026!` | Senha do Redis (`--requirepass`) — precisa bater entre o serviço `redis` e o `workbox-api`. |
 
 ```bash
 cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcionam
 docker compose up --build -d
-docker compose ps      # confirma os 6 serviços "healthy"
+docker compose ps      # confirma os 7 serviços "healthy"
 ```
 
 ## Backup e restore do banco
