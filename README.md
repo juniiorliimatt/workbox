@@ -129,7 +129,7 @@ DATABASE_URL=jdbc:postgresql://localhost:7050/workbox ./gradlew bootRun
 
 # notes-service (7055) — resource server, precisa de um JWT do workbox-api
 cd notes-service
-MONGODB_URI=mongodb://localhost:7054/notes ./gradlew bootRun
+MONGODB_URI="mongodb://root:MyS3cur3M0ngoPassw0rd2026!@localhost:7054/notes?authSource=admin" ./gradlew bootRun
 
 # frontend
 cd workbox-app
@@ -176,6 +176,7 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `BUDGET_SERVICE_PORT` | `7052` | Idem, pro `budget-service`. |
 | `MONGO_PORT` | `7054` | Porta do MongoDB exposta no **host**. Dentro da rede docker os backends sempre falam com `mongo:27017` — isso nunca muda. |
 | `MONGO_HOST` | `mongo` | Host usado pelo `notes-service` pra montar `MONGODB_URI`. Só sobrescreva se apontar pra um Mongo fora do compose. |
+| `MONGO_USER` / `MONGO_PASSWORD` | `root` / `MyS3cur3M0ngoPassw0rd2026!` | Credenciais do usuário root do Mongo — só têm efeito automático em volume vazio (`MONGO_INITDB_ROOT_USERNAME`/`PASSWORD`); num volume já existente, crie o usuário manualmente antes (ver `notes-service/README.md`). |
 | `NOTES_SERVICE_PORT` | `7055` | Idem, pro `notes-service`. |
 | `NOTES_INTROSPECTION_CLIENT_ID` / `NOTES_INTROSPECTION_CLIENT_SECRET` | `notes-service` / `MyS3cur3Cli3ntS3cr3t!N0tes!` | Idem, client credentials do `notes-service`. |
 | `REDIS_PORT` | `7056` | Porta do Redis exposta no **host**. Dentro da rede docker o `workbox-api` sempre fala com `redis:6379` — isso nunca muda. |
