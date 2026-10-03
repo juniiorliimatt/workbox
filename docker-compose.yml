@@ -166,6 +166,42 @@ services:
       resources:
         limits: { cpus: "1", memory: 512M }
 
+  # Telemetria do Forza (Data Out): o jogo manda UDP pro IP deste host na porta FORZA_UDP_PORT
+  # (Xbox -> PC na mesma LAN, firewall precisa liberar UDP). Só o Postgres é dependência dura:
+  # a ingestão não depende do workbox-api, que só é consultado pra validar token das chamadas REST.
+  forza-telemetry-service:
+    build: ./forza-telemetry-service
+    container_name: forza-telemetry-service
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
+      - PORT=8083
+      - DATABASE_URL=jdbc:postgresql://${DB_HOST:-postgres}:5432/workbox?reWriteBatchedInserts=true
+      - POSTGRES_USER=forza_service
+      - POSTGRES_PASSWORD=forza_service
+      - TELEMETRY_UDP_PORT=5310
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      # Client credentials do forza-telemetry-service em /api/v1/auth/introspect — tem que
+      # bater com uma linha ativa em workbox-api.api_clients (ver changelog
+      # 261003_0000_seed_api_clients_forza_telemetry_service.sql; a seed padrão já usa esses defaults).
+      - INTROSPECTION_CLIENT_ID=${FORZA_INTROSPECTION_CLIENT_ID:-forza-telemetry-service}
+      - INTROSPECTION_CLIENT_SECRET=${FORZA_INTROSPECTION_CLIENT_SECRET:-MyS3cur3Cli3ntS3cr3t!F0rza!}
+    ports:
+      - "${FORZA_SERVICE_PORT:-7057}:8083"
+      - "${FORZA_UDP_PORT:-5310}:5310/udp"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
   workbox-app:
     build: ./workbox-app
     container_name: workbox-app

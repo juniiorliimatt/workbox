@@ -2,5 +2,6 @@
 -- postgres/postgres do container). Senha local de estudo — não use isso em produção.
 CREATE ROLE workbox_service WITH LOGIN PASSWORD 'workbox_service';
 CREATE ROLE budget_service WITH LOGIN PASSWORD 'budget_service';
+CREATE ROLE forza_service WITH LOGIN PASSWORD 'forza_service';
 
-GRANT CONNECT ON DATABASE workbox TO workbox_service, budget_service;
+GRANT CONNECT ON DATABASE workbox TO workbox_service, budget_service, forza_service;
