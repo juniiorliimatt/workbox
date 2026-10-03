@@ -52,11 +52,12 @@ este arquivo cobre só o que vale pro monorepo inteiro.
 | [`budget-service/`](budget-service/) | 7052 | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api via introspecção remota. Postgres (schema `budget`) | [`budget-service/CLAUDE.md`](budget-service/CLAUDE.md) |
 | [`notes-service/`](notes-service/) | 7055 | Notas/documentos pessoais (conteúdo livre, sem schema fixo) — *resource server*, mesmo padrão de introspecção. **MongoDB**, não Postgres — primeiro serviço do monorepo a usar um banco não-relacional | [`notes-service/CLAUDE.md`](notes-service/CLAUDE.md) |
 | [`forza-telemetry-service/`](forza-telemetry-service/) | 7057 + UDP 5310 | Telemetria do Forza (Data Out UDP → sessões, voltas e resumo de tuning) — *resource server*, mesmo padrão de introspecção. Postgres, schema `forza`. Ainda não registrado em `.gitmodules` (sem repo no GitLab, repo git local sem commits) | [`forza-telemetry-service/CLAUDE.md`](forza-telemetry-service/CLAUDE.md) |
-| [`workbox-app/`](workbox-app/) | 7053 | Frontend SPA (React/TS/Vite/MUI). Consome só `workbox-api` e `budget-service` hoje | [`workbox-app/CLAUDE.md`](workbox-app/CLAUDE.md) |
+| [`workbox-app/`](workbox-app/) | 7053 | Frontend SPA (React/TS/Vite/MUI). Consome `workbox-api`, `budget-service` e `forza-telemetry-service` | [`workbox-app/CLAUDE.md`](workbox-app/CLAUDE.md) |
 
-O frontend ainda **não** consome `notes-service` nem `forza-telemetry-service` (nem o
-proxy do Vite/nginx roteia pra eles) — ligar qualquer um exige rota nova em
-`workbox-app/vite.config.ts` **e** `workbox-app/nginx.conf.template`.
+O frontend consome `workbox-api`, `budget-service` e `forza-telemetry-service` (módulo
+`/forza`). Ele ainda **não** consome o `notes-service` (o proxy do Vite/nginx não roteia
+`/api/v1/documents`) — ligar exige rota nova em `workbox-app/vite.config.ts`,
+`workbox-app/nginx.conf.template` e o upstream no `docker-compose.yml`.
 
 **Nomenclatura**: só o `workbox-api` leva sufixo `-api` — é o único ponto de entrada/
 emissor de identidade do sistema. Todo microserviço novo (domínio downstream, resource
