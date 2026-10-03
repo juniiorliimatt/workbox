@@ -192,13 +192,14 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
   do ponteiro no repositório raiz é um commit separado (`chore: atualiza ponteiro do
   submódulo <nome>`). Nunca varrer alterações alheias do working tree (há edições em
   andamento no raiz e nos submódulos): `git add` só dos arquivos da mudança.
-- CI: `workbox-api`/`budget-service` têm `.gitlab-ci.yml` com `test` →
-  `contract-drift-check` → `build` e `sonarcloud-check`; `workbox-app` só tem o job de
-  Sonar. O Sonar dispara só em MR e em `main` (**não** `develop` — limitação do plano
-  Free, não re-adicionar sem conferir). Sonar enrolado: `workbox-api`, `budget-service`,
-  `workbox-app` (a raiz foi removida de propósito). `notes-service` e
-  `forza-telemetry-service` **não têm CI nem Sonar** ainda — o `contract-drift-check`
-  não os protege, então regenerar o contrato à mão.
+- CI: `workbox-api`/`budget-service` têm `test` → `contract-drift-check` → `build` e
+  `sonarcloud-check` (com `docker:dind` pros ITs com Testcontainers); `notes-service` tem
+  `test` → `contract-drift-check` → `build`; `forza-telemetry-service` tem `test` (dind) →
+  `build` (sem drift-check: a geração do contrato precisa de Postgres — regenerar à mão);
+  `workbox-app` tem `lint-test-build` em toda branch e `sonarcloud-check`. O Sonar dispara só
+  em MR e em `main` (**não** `develop` — limitação do plano Free, não re-adicionar sem
+  conferir). Sonar enrolado: `workbox-api`, `budget-service`, `workbox-app` (a raiz foi
+  removida de propósito); `notes-service` e `forza-telemetry-service` ainda sem Sonar.
 - O grupo GitLab (`sonar-group-oojuniiin`) já foi renomeado várias vezes — confirme a URL
   do remote em vez de assumir.
 
