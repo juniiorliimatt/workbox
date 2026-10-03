@@ -4,12 +4,20 @@
 #    recusa subir se ela não estiver setada — em vez de silenciosamente cair no valor de
 #    estudo hardcoded no application.properties/initdb.
 # 2. Postgres não expõe porta pro host — só alcançável pela rede interna do compose.
-# 3. workbox-api/budget-service/workbox-app também não expõem porta pro host — só o
-#    Caddy fala com o mundo externo (TLS automático via Let's Encrypt, precisa de DNS
-#    real apontando pro IP da VPS antes de subir).
+# 3. Nenhum serviço de aplicação expõe porta HTTP pro host — só o Caddy fala com o mundo
+#    externo (TLS automático via Let's Encrypt, precisa de DNS real apontando pro IP da
+#    VPS antes de subir). Única exceção: a UDP 5310 do forza-telemetry-service, que o
+#    jogo (Xbox) precisa alcançar — restrinja no firewall do host ao IP do console.
+# 4. Redis (refresh tokens do workbox-api) e MongoDB (notes-service) exigem senha, sem
+#    default, e também ficam sem porta no host.
+# 5. Cada resource server (budget, notes, forza) se autentica no workbox-api com client
+#    credentials PRÓPRIOS (*_INTROSPECTION_CLIENT_ID/SECRET), que precisam existir em
+#    workbox.api_clients. As linhas seed dos changesets usam secrets de estudo: em
+#    produção insira os clientes reais via changeset novo (hash BCrypt custo 12 do secret
+#    forte) e revogue as seeds com active=false — ver workbox-api/README.md.
 #
-# Limitação aceita conscientemente: as senhas dos roles workbox_service/budget_service
-# continuam fixas em initdb/*.sql (não vêm de env var aqui) porque o Postgres não tem
+# Limitação aceita conscientemente: as senhas dos roles workbox_service/budget_service/
+# forza_service continuam fixas em initdb/*.sql (não vêm de env var aqui) porque o Postgres não tem
 # nenhuma porta exposta ao host nem à internet — comprometer esse segredo exigiria já
 # ter RCE dentro da rede docker, cenário em que o segredo do Postgres deixa de ser o
 # problema principal. O segredo que de fato importa (JWT_SECRET, verificável por
@@ -42,6 +50,45 @@ services:
       resources:
         limits: { cpus: "1", memory: 512M }
 
+  # Sem volume de propósito — só guarda refresh tokens (TTL nativo, dado efêmero): perder
+  # o conteúdo num restart só força re-login. Sem porta no host.
+  redis:
+    image: redis:7-alpine
+    container_name: workbox-redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?defina REDIS_PASSWORD em .env.prod - gere com openssl rand -base64 24}"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?defina REDIS_PASSWORD em .env.prod}
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128M }
+
+  # mongo:7 (o 8 se recusa a iniciar em kernels >= 6.19 — SERVER-121912). O usuário root só
+  # é criado em volume vazio; num volume já existente crie-o à mão via mongosh (ver
+  # notes-service/README.md). Sem porta no host.
+  mongo:
+    image: mongo:7
+    container_name: workbox-mongo
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:?defina MONGO_USER em .env.prod}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:?defina MONGO_PASSWORD em .env.prod - gere com openssl rand -base64 24}
+    volumes:
+      - ./.mongodata:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u \"$$MONGO_INITDB_ROOT_USERNAME\" -p \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval \"db.adminCommand('ping')\""]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
   workbox-api:
     build: ./workbox-api
     container_name: workbox-api
@@ -61,10 +108,15 @@ services:
       - MAIL_USERNAME=${MAIL_USERNAME:-}
       - MAIL_PASSWORD=${MAIL_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-no-reply@workbox.local}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?defina REDIS_PASSWORD em .env.prod - gere com openssl rand -base64 24}
     volumes:
       - workbox_api_avatars:/app/uploads/avatars
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
@@ -105,14 +157,78 @@ services:
       resources:
         limits: { cpus: "1", memory: 512M }
 
+  notes-service:
+    build: ./notes-service
+    container_name: notes-service
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=prod
+      - PORT=8082
+      - MONGODB_URI=mongodb://${MONGO_USER:?defina MONGO_USER em .env.prod}:${MONGO_PASSWORD:?defina MONGO_PASSWORD em .env.prod}@mongo:27017/notes?authSource=admin
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      - INTROSPECTION_CLIENT_ID=${NOTES_INTROSPECTION_CLIENT_ID:?defina NOTES_INTROSPECTION_CLIENT_ID em .env.prod}
+      - INTROSPECTION_CLIENT_SECRET=${NOTES_INTROSPECTION_CLIENT_SECRET:?defina NOTES_INTROSPECTION_CLIENT_SECRET em .env.prod - gere com openssl rand -base64 32}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      workbox-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
+  # Telemetria do Forza (Data Out): o jogo manda UDP pro IP público deste host na porta
+  # FORZA_UDP_PORT. A REST não sai do host (só via nginx do workbox-app). Sem autenticação
+  # no UDP — restrinja a porta no firewall ao IP do console.
+  forza-telemetry-service:
+    build: ./forza-telemetry-service
+    container_name: forza-telemetry-service
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=prod
+      - PORT=8083
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/workbox?reWriteBatchedInserts=true
+      - POSTGRES_USER=forza_service
+      - POSTGRES_PASSWORD=forza_service
+      - TELEMETRY_UDP_PORT=5310
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      - INTROSPECTION_CLIENT_ID=${FORZA_INTROSPECTION_CLIENT_ID:?defina FORZA_INTROSPECTION_CLIENT_ID em .env.prod}
+      - INTROSPECTION_CLIENT_SECRET=${FORZA_INTROSPECTION_CLIENT_SECRET:?defina FORZA_INTROSPECTION_CLIENT_SECRET em .env.prod - gere com openssl rand -base64 32}
+    ports:
+      - "${FORZA_UDP_PORT:-5310}:5310/udp"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
   workbox-app:
     build: ./workbox-app
     container_name: workbox-app
     restart: unless-stopped
     environment:
       - WORKBOX_API_UPSTREAM=http://workbox-api:8080
+      - BUDGET_SERVICE_UPSTREAM=http://budget-service:8081
+      - FORZA_SERVICE_UPSTREAM=http://forza-telemetry-service:8083
     depends_on:
       workbox-api:
+        condition: service_healthy
+      budget-service:
+        condition: service_healthy
+      forza-telemetry-service:
         condition: service_healthy
     deploy:
       resources:
