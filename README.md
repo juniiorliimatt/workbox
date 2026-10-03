@@ -11,6 +11,8 @@ prioridade é ter um lugar central pra prototipar e aprender.
 |---|---|---|---|
 | [`workbox-api`](workbox-api/) | Backend — identidade/autenticação (emite JWT) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase, JWT | [README](workbox-api/README.md) |
 | [`budget-service`](budget-service/) | Backend — finanças pessoais (*resource server*, valida JWT do workbox-api) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase | [README](budget-service/README.md) |
+| [`notes-service`](notes-service/) | Backend — notas/documentos pessoais (*resource server*, valida JWT do workbox-api) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, MongoDB | [README](notes-service/README.md) |
+| [`forza-telemetry-service`](forza-telemetry-service/) | Backend — telemetria do Forza (Data Out UDP → sessões/voltas/resumo de tuning; *resource server*) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase, UDP | [README](forza-telemetry-service/README.md) |
 | [`workbox-app`](workbox-app/) | Frontend | React 18, TypeScript, Vite, MUI | [README](workbox-app/README.md) |
 
 Cada microserviço backend é um repositório GitLab próprio — não pacotes dentro de um
@@ -25,7 +27,7 @@ git submodule update --init --recursive
 
 ## Espelho no GitHub / git hooks
 
-Cada repositório (este e os 3 submódulos) tem um espelho no GitHub
+Cada repositório (este e os submódulos) tem um espelho no GitHub
 (`juniiorliimatt/<repo>`), mantido em sincronia por um hook local — não é
 subtree/subtree-split, é o mesmo histórico enviado pros dois remotes. Depois de clonar,
 em cada repositório (raiz e cada submódulo):
@@ -44,17 +46,17 @@ Hooks em `.githooks/` (versionados, um conjunto idêntico em cada repositório):
   descontinuado (2026-08-29) já que o desenvolvimento agora vive numa branch fixa
   (`develop`) e versão passou a ser identificada por tags Git, não por commit.
 
-## Divisão entre agentes de IA
+## Agente de IA
 
-Este repositório é desenvolvido com dois agentes de IA em paralelo, cada um dono de um
-submódulo — Claude Code no backend, Antigravity no frontend. A divisão de escopo e a
-regra de como os dois lados se alinham (via o contrato OpenAPI do backend) estão
-formalizadas em **[AGENTS.md](AGENTS.md)**.
+Este repositório é desenvolvido pelo Claude Code, full-stack (backend e frontend) — o
+Antigravity deixou de ser usado em 2026-10-03. A divisão de autoria de código por
+repositório de backend e as regras de contrato OpenAPI estão formalizadas em
+**[CLAUDE.md](CLAUDE.md)**.
 
 ## Convenção de commits
 
-Vale pros dois agentes de IA e pro desenvolvedor, nos quatro repositórios deste monorepo
-(este e os 3 submódulos) — sempre em português (pt-BR), Conventional Commits com o
+Vale pro Claude Code e pro desenvolvedor, em todos os repositórios deste monorepo
+(este e os submódulos) — sempre em português (pt-BR), Conventional Commits com o
 prefixo de tipo em inglês:
 
 ```
@@ -62,9 +64,8 @@ prefixo de tipo em inglês:
 ```
 
 Tipos aceitos: `feat`, `fix`, `docs`, `chore`, `test`, `refactor`, `style`, `perf`, `ci`,
-`revert`. Diverge de propósito do default do `~/.claude/CLAUDE.md`/`~/GEMINI.md` globais
-do usuário (que pedem inglês) — regra completa e exemplo em
-[AGENTS.md](AGENTS.md#convenção-de-mensagens-de-commit).
+`revert`. Diverge de propósito do formato de commit do `~/.claude/CLAUDE.md` global —
+regra completa e exemplo em [CLAUDE.md](CLAUDE.md#convenção-de-mensagens-de-commit).
 
 ## Contrato de API
 
@@ -93,11 +94,11 @@ provisiona, na primeira subida (só roda em volume vazio):
 
 - Extensões (`pgcrypto`, `uuid-ossp`) — instaladas uma vez pelo superusuário, os
   changesets de Liquibase que tentam recriá-las viram no-op.
-- Um role Postgres por microserviço (`workbox_service`, `budget_service`), **dono só do seu
+- Um role Postgres por microserviço (`workbox_service`, `budget_service`, `forza_service`), **dono só do seu
   próprio schema** — sem `CREATE` no banco, sem acesso a schema de outro serviço
   (confirmado: `SELECT` cross-schema dá `permission denied`). Cada app se conecta com o
   role do seu próprio serviço, nunca com o superusuário `postgres`.
-- Os schemas (`workbox` para o workbox-api; `budget` para o budget-service).
+- Os schemas (`workbox` para o workbox-api; `budget` para o budget-service; `forza` para o forza-telemetry-service).
 
 Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
 (nessa ordem: `00`, `01`, `02`).
@@ -131,6 +132,10 @@ DATABASE_URL=jdbc:postgresql://localhost:7050/workbox ./gradlew bootRun
 cd notes-service
 MONGODB_URI="mongodb://root:MyS3cur3M0ngoPassw0rd2026!@localhost:7054/notes?authSource=admin" ./gradlew bootRun
 
+# forza-telemetry-service (7057 + UDP 5310) — resource server, precisa de um JWT do workbox-api
+cd forza-telemetry-service
+DATABASE_URL="jdbc:postgresql://localhost:7050/workbox?reWriteBatchedInserts=true" ./gradlew bootRun
+
 # frontend
 cd workbox-app
 npm install
@@ -141,7 +146,7 @@ npm run dev   # http://localhost:7053
 
 Cada submódulo tem seu próprio `Dockerfile` (multi-stage, usuário non-root) — `docker
 compose up --build -d` na raiz sobe Postgres + MongoDB + Redis + `workbox-api` +
-`budget-service` + `notes-service` + `workbox-app`, um comando só, sem precisar entrar em
+`budget-service` + `notes-service` + `forza-telemetry-service` + `workbox-app`, um comando só, sem precisar entrar em
 cada submódulo.
 
 `workbox-app` é standalone — nginx serve os assets buildados (`npm run build`, saída
@@ -156,8 +161,8 @@ Ordem de subida garantida por `depends_on: condition: service_healthy` — Postg
 (`pg_isready`) antes dos backends, backends (`/actuator/health`, liberado sem
 autenticação nos dois) antes do front.
 
-**Java 25 LTS** nos três backends (`ARG JAVA_VERSION` em cada `Dockerfile` +
-`java.toolchain` em cada `build.gradle`) — mude nos seis lugares juntos se atualizar,
+**Java 25 LTS** nos quatro backends (`ARG JAVA_VERSION` em cada `Dockerfile` +
+`java.toolchain` em cada `build.gradle`) — mude nos oito lugares juntos se atualizar,
 não deixe a versão flutuar entre serviços. `workbox-app` é Node 22 (`ARG NODE_VERSION`
 no `Dockerfile` do front), não imagem Java.
 
@@ -179,6 +184,9 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `MONGO_USER` / `MONGO_PASSWORD` | `root` / `MyS3cur3M0ngoPassw0rd2026!` | Credenciais do usuário root do Mongo — só têm efeito automático em volume vazio (`MONGO_INITDB_ROOT_USERNAME`/`PASSWORD`); num volume já existente, crie o usuário manualmente antes (ver `notes-service/README.md`). |
 | `NOTES_SERVICE_PORT` | `7055` | Idem, pro `notes-service`. |
 | `NOTES_INTROSPECTION_CLIENT_ID` / `NOTES_INTROSPECTION_CLIENT_SECRET` | `notes-service` / `MyS3cur3Cli3ntS3cr3t!N0tes!` | Idem, client credentials do `notes-service`. |
+| `FORZA_SERVICE_PORT` | `7057` | Porta da API REST do `forza-telemetry-service` exposta no host. |
+| `FORZA_UDP_PORT` | `5310` | Porta **UDP** exposta no host pra o Data Out do Forza (Xbox → IP do PC). Evite 5200–5300 (o Forza Horizon usa essa faixa) e libere UDP de entrada no firewall. |
+| `FORZA_INTROSPECTION_CLIENT_ID` / `FORZA_INTROSPECTION_CLIENT_SECRET` | `forza-telemetry-service` / `MyS3cur3Cli3ntS3cr3t!F0rza!` | Idem, client credentials do `forza-telemetry-service`. |
 | `REDIS_PORT` | `7056` | Porta do Redis exposta no **host**. Dentro da rede docker o `workbox-api` sempre fala com `redis:6379` — isso nunca muda. |
 | `REDIS_HOST` | `redis` | Host usado pelo `workbox-api` pra montar a conexão Redis. Só sobrescreva se apontar pra um Redis fora do compose. |
 | `REDIS_PASSWORD` | `MyS3cur3R3disP@ssw0rd2026!` | Senha do Redis (`--requirepass`) — precisa bater entre o serviço `redis` e o `workbox-api`. |
@@ -186,7 +194,7 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 ```bash
 cp .env.example .env   # ajuste se precisar, senão os defaults acima já funcionam
 docker compose up --build -d
-docker compose ps      # confirma os 7 serviços "healthy"
+docker compose ps      # confirma os 8 serviços "healthy"
 ```
 
 ## Backup e restore do banco
