@@ -11,3 +11,7 @@
 	path = notes-service
 	url = git@gitlab.com:sonar-group-oojuniiin/notes-service.git
 	branch = develop
+[submodule "forza-telemetry-service"]
+	path = forza-telemetry-service
+	url = git@gitlab.com:sonar-group-oojuniiin/forza-telemetry-service.git
+	branch = develop
