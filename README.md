@@ -197,6 +197,26 @@ docker compose up --build -d
 docker compose ps      # confirma os 8 serviços "healthy"
 ```
 
+## Compose de produção
+
+`docker-compose.prod.yml` sobe o mesmo stack do dev (Postgres, Redis, MongoDB, `workbox-api`,
+`budget-service`, `notes-service`, `forza-telemetry-service`, `workbox-app`) mais o Caddy (TLS
+automático), com diferenças: **nenhum segredo tem default** (`${VAR:?...}` — o compose recusa
+subir sem eles), nenhum serviço expõe porta HTTP no host (só o Caddy; exceção: UDP 5310 do
+forza, a restringir no firewall ao IP do console) e Redis/MongoDB exigem senha.
+
+```bash
+cp .env.prod.example .env.prod   # preencha tudo (senhas, JWT_SECRET, domínios, client credentials)
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+Cada resource server (`budget-service`, `notes-service`, `forza-telemetry-service`) precisa de um
+cliente ativo em `workbox.api_clients` com o secret real — as linhas seed dos changesets usam
+secrets de estudo; insira os reais via changeset novo e desative as seeds (ver
+[`workbox-api/README.md`](workbox-api/README.md#clientes-de-introspecção-resource-servers)). O
+arquivo foi validado com `docker compose config` (variáveis e interpolação), mas ainda **não foi
+subido de verdade** numa VPS.
+
 ## Backup e restore do banco
 
 `scripts/backup-db.sh`/`scripts/restore-db.sh` — `pg_dump`/`pg_restore --format=custom`

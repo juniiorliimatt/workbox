@@ -172,7 +172,9 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
   tocar no Postgres — só o `scripts/down-all.sh` derruba tudo, e só por pedido explícito.
 - `.env` (gitignored) sobrescreve os defaults; `.env.example` lista todas as variáveis.
   Credenciais de dev nos defaults são só de estudo local — nunca replicar pra `prod`
-  (`docker-compose.prod.yml` + `.env.prod.example`).
+  (`docker-compose.prod.yml` + `.env.prod.example` — mantenha os dois em dia ao adicionar
+  serviço/variável: cobre todos os serviços, sem defaults de segredo; validar com
+  `docker compose --env-file <env> -f docker-compose.prod.yml config -q`).
 - Backup/restore: `scripts/backup-db.sh` / `scripts/restore-db.sh` via
   `docker compose --profile backup run --rm backup|restore` (restore usa `--clean
   --if-exists` — confirme o alvo antes).
@@ -195,7 +197,7 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
 - CI: `workbox-api`/`budget-service` têm `test` → `contract-drift-check` → `build` e
   `sonarcloud-check` (com `docker:dind` pros ITs com Testcontainers); `notes-service` tem
   `test` → `contract-drift-check` → `build`; `forza-telemetry-service` tem `test` (dind) →
-  `build` (sem drift-check: a geração do contrato precisa de Postgres — regenerar à mão);
+  `contract-drift-check` → `build`;
   `workbox-app` tem `lint-test-build` em toda branch e `sonarcloud-check`. O Sonar dispara só
   em MR e em `main` (**não** `develop` — limitação do plano Free, não re-adicionar sem
   conferir). Sonar enrolado: `workbox-api`, `budget-service`, `workbox-app` (a raiz foi
