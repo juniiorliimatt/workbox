@@ -18,7 +18,18 @@ if [[ "${1:-}" == "--build" ]]; then
   docker compose build
 fi
 
+# IP da máquina na LAN pra tela "Ao vivo" do front (onde apontar o Data Out do Forza):
+# respeita FORZA_HOST_IP do ambiente ou do .env; senão usa a origem da rota padrão.
+if [[ -z "${FORZA_HOST_IP:-}" ]] && ! grep -qE '^FORZA_HOST_IP=.+' .env 2>/dev/null; then
+  DETECTED_IP="$(ip route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1 || true)"
+  if [[ -n "$DETECTED_IP" ]]; then
+    export FORZA_HOST_IP="$DETECTED_IP"
+    echo "FORZA_HOST_IP detectado: $FORZA_HOST_IP"
+  fi
+fi
+
 echo "Subindo containers..."
+
 docker compose up -d
 
 echo

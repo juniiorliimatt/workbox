@@ -180,6 +180,10 @@ services:
       - POSTGRES_USER=forza_service
       - POSTGRES_PASSWORD=forza_service
       - TELEMETRY_UDP_PORT=5310
+      # IP da máquina na LAN e porta publicada, exibidos na tela "Ao vivo" (onde apontar o Data Out).
+      # Vazio = não anunciado; scripts/up-all.sh detecta o IP sozinho (FORZA_HOST_IP).
+      - TELEMETRY_ADVERTISED_HOST=${FORZA_HOST_IP:-}
+      - TELEMETRY_ADVERTISED_PORT=${FORZA_UDP_PORT:-5310}
       - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
       # Client credentials do forza-telemetry-service em /api/v1/auth/introspect — tem que
       # bater com uma linha ativa em workbox-api.api_clients (ver changelog
