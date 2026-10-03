@@ -209,12 +209,15 @@ services:
     environment:
       - WORKBOX_API_UPSTREAM=http://workbox-api:8080
       - BUDGET_SERVICE_UPSTREAM=http://budget-service:8081
+      - FORZA_SERVICE_UPSTREAM=http://forza-telemetry-service:8083
     ports:
       - "${FRONT_PORT:-7053}:8080"
     depends_on:
       workbox-api:
         condition: service_healthy
       budget-service:
+        condition: service_healthy
+      forza-telemetry-service:
         condition: service_healthy
     healthcheck:
       # 127.0.0.1, não localhost - a imagem alpine resolve localhost pra ::1 primeiro e
