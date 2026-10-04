@@ -113,6 +113,11 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   `workbox.api_clients`), sem decodificar o JWT localmente, sem conhecer `JWT_SECRET` e
   sem reimplementar login. Ver
   [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md).
+- **Acesso por módulo**: a introspecção devolve também `modules` (ADMIN: todos; demais: só os
+  módulos das roles que têm — `USER` sozinho não libera nenhum). Cada resource server exige o
+  módulo dele (`budget-service` → `FINANCAS`, `forza-telemetry-service` → `FORZA`; 403 sem ele).
+  `notes-service` ainda não é módulo liberado, então segue sem essa trava. Módulo novo =
+  migration no `workbox-api` (módulo + role vinculada) + trava no serviço + card no Dashboard.
 - Como o mesmo agente cuida dos dois lados, não há mais handoff manual entre agentes: o
   ajuste correspondente no `workbox-app` entra na mesma tarefa que muda o contrato do
   backend (só o contrato observável por client — rota, payload, status code, auth —
