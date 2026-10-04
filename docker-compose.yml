@@ -206,6 +206,46 @@ services:
       resources:
         limits: { cpus: "1", memory: 512M }
 
+  # Backup do banco pela tela (só ADMIN): pg_dump de todos os schemas com um role só de leitura
+  # (backup_service, initdb/03-create-backup-role.sql — num banco já existente rode o arquivo à mão).
+  # Os arquivos ficam em ./backups do host (a mesma pasta dos scripts backup-db.sh/restore-db.sh);
+  # BACKUP_HOST_DIR é só o caminho exibido na tela (scripts/up-all.sh preenche com o caminho absoluto).
+  backup-service:
+    build: ./backup-service
+    container_name: backup-service
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
+      - PORT=8084
+      - PGHOST=${DB_HOST:-postgres}
+      - PGPORT=5432
+      - PGDATABASE=workbox
+      - PGUSER=backup_service
+      - PGPASSWORD=backup_service
+      - BACKUP_DIR=/backups
+      - BACKUP_HOST_DIR=${BACKUP_HOST_DIR:-}
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      # Client credentials do backup-service em /api/v1/auth/introspect — tem que bater com uma linha
+      # ativa em workbox-api.api_clients (changelog 261004_0004_seed_api_clients_backup_service.sql).
+      - INTROSPECTION_CLIENT_ID=${BACKUP_INTROSPECTION_CLIENT_ID:-backup-service}
+      - INTROSPECTION_CLIENT_SECRET=${BACKUP_INTROSPECTION_CLIENT_SECRET:-MyS3cur3Cli3ntS3cr3t!B4ckup!}
+    volumes:
+      - ./backups:/backups
+    ports:
+      - "${BACKUP_SERVICE_PORT:-7058}:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
   workbox-app:
     build: ./workbox-app
     container_name: workbox-app
@@ -214,6 +254,7 @@ services:
       - WORKBOX_API_UPSTREAM=http://workbox-api:8080
       - BUDGET_SERVICE_UPSTREAM=http://budget-service:8081
       - FORZA_SERVICE_UPSTREAM=http://forza-telemetry-service:8083
+      - BACKUP_SERVICE_UPSTREAM=http://backup-service:8084
     ports:
       - "${FRONT_PORT:-7053}:8080"
     depends_on:

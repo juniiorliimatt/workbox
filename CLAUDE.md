@@ -52,6 +52,7 @@ este arquivo cobre só o que vale pro monorepo inteiro.
 | [`budget-service/`](budget-service/) | 7052 | Domínio de finanças pessoais — *resource server*, valida os JWTs do workbox-api via introspecção remota. Postgres (schema `budget`) | [`budget-service/CLAUDE.md`](budget-service/CLAUDE.md) |
 | [`notes-service/`](notes-service/) | 7055 | Notas/documentos pessoais (conteúdo livre, sem schema fixo) — *resource server*, mesmo padrão de introspecção. **MongoDB**, não Postgres — primeiro serviço do monorepo a usar um banco não-relacional | [`notes-service/CLAUDE.md`](notes-service/CLAUDE.md) |
 | [`forza-telemetry-service/`](forza-telemetry-service/) | 7057 + UDP 5310 | Telemetria do Forza (Data Out UDP → sessões, voltas e resumo de tuning) — *resource server*, mesmo padrão de introspecção. Postgres, schema `forza`. Ainda não registrado em `.gitmodules` (sem repo no GitLab, repo git local sem commits) | [`forza-telemetry-service/CLAUDE.md`](forza-telemetry-service/CLAUDE.md) |
+| [`backup-service/`](backup-service/) | 7058 | Backup do Postgres pela tela (só ADMIN): `pg_dump` de todos os schemas numa pasta (`./backups`), listar/baixar/apagar, cifra opcional por senha. *Resource server*, **sem banco próprio** (arquivos + metadados em disco), role Postgres só-leitura `backup_service`. **Sem restore na API/tela, de propósito** — só `scripts/restore-db.sh`. Repo git local; ainda não registrado em `.gitmodules` (falta criar o repo no GitLab) | [`backup-service/CLAUDE.md`](backup-service/CLAUDE.md) |
 | [`workbox-app/`](workbox-app/) | 7053 | Frontend SPA (React/TS/Vite/MUI). Consome `workbox-api`, `budget-service` e `forza-telemetry-service` | [`workbox-app/CLAUDE.md`](workbox-app/CLAUDE.md) |
 
 O frontend consome `workbox-api`, `budget-service` e `forza-telemetry-service` (módulo
@@ -116,7 +117,8 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
 - **Acesso por módulo**: a introspecção devolve também `modules` (ADMIN: todos; demais: só os
   módulos das roles que têm — `USER` sozinho não libera nenhum). Cada resource server exige o
   módulo dele (`budget-service` → `FINANCAS`, `forza-telemetry-service` → `FORZA`; 403 sem ele).
-  `notes-service` ainda não é módulo liberado, então segue sem essa trava. Módulo novo =
+  `notes-service` ainda não é módulo liberado, então segue sem essa trava. O `backup-service` não usa
+  módulo: exige o papel `ADMIN` (um backup contém hashes de senha e segredos de MFA). Módulo novo =
   migration no `workbox-api` (módulo + role vinculada) + trava no serviço + card no Dashboard.
 - Como o mesmo agente cuida dos dois lados, não há mais handoff manual entre agentes: o
   ajuste correspondente no `workbox-app` entra na mesma tarefa que muda o contrato do
@@ -172,6 +174,7 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
 | `notes-service` | 7055 | 8082 | |
 | Redis (`workbox-redis`) | 7056 | 6379 | só `workbox-api` (refresh tokens); sem volume |
 | `forza-telemetry-service` | 7057 + UDP 5310 | 8083 + 5310/udp | |
+| `backup-service` | 7058 | 8084 | liga `./backups` do host em `/backups`; `BACKUP_HOST_DIR` (preenchido pelo `up-all.sh`) é só o caminho exibido na tela; role `backup_service` vem de `initdb/03-create-backup-role.sql` (num banco existente, rodar à mão) |
 
 - **Ciclo de vida dos containers**: parar/remover containers de app e front nunca deve
   tocar no Postgres — só o `scripts/down-all.sh` derruba tudo, e só por pedido explícito.

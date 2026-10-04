@@ -219,6 +219,27 @@ subido de verdade** numa VPS.
 
 ## Backup e restore do banco
 
+### Pela aplicação (Admin → "Backup do banco", só ADMIN)
+
+O [`backup-service`](backup-service/) gera o `pg_dump` (todos os schemas) por uma tela: botão
+"Gerar backup agora", lista com **o caminho do arquivo no host** (`./backups`, a mesma pasta dos
+scripts), download e exclusão. Cifra opcional com uma senha que você digita na hora (openssl
+AES-256-CBC + PBKDF2, a senha nunca é gravada: **sem ela o backup não abre**). **Restore não existe
+na tela** — só por script:
+
+```bash
+scripts/decrypt-backup.sh backups/workbox_<ts>.dump.enc      # só se foi cifrado; pede a senha
+docker compose --profile backup run --rm restore /backups/workbox_<ts>.dump
+```
+
+O serviço usa um role só de leitura (`backup_service`, `pg_read_all_data`, `initdb/03-create-backup-role.sql`).
+Num banco que já existia, o `initdb/` não roda: execute o arquivo à mão
+(`docker exec -i workbox-postgres psql -U postgres -d workbox < initdb/03-create-backup-role.sql`).
+`BACKUP_HOST_DIR` (preenchido pelo `scripts/up-all.sh`) é só o caminho exibido na tela. Backup no mesmo
+disco do banco não protege contra perda do disco: baixe uma cópia pela tela e guarde fora do servidor.
+
+### Pelos scripts
+
 `scripts/backup-db.sh`/`scripts/restore-db.sh` — `pg_dump`/`pg_restore --format=custom`
 (comprimido, permite restore seletivo), banco `workbox` inteiro, todos os schemas de
 uma vez (`workbox` do `workbox-api`, `budget` do `budget-service`). Rodam dentro de
