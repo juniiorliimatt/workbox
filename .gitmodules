@@ -15,3 +15,7 @@
 	path = forza-telemetry-service
 	url = git@gitlab.com:sonar-group-oojuniiin/forza-telemetry-service.git
 	branch = develop
+[submodule "backup-service"]
+	path = backup-service
+	url = git@gitlab.com:sonar-group-oojuniiin/backup-service.git
+	branch = develop
