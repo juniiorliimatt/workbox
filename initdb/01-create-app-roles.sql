@@ -3,5 +3,6 @@
 CREATE ROLE workbox_service WITH LOGIN PASSWORD 'workbox_service';
 CREATE ROLE budget_service WITH LOGIN PASSWORD 'budget_service';
 CREATE ROLE forza_service WITH LOGIN PASSWORD 'forza_service';
+CREATE ROLE moto_service WITH LOGIN PASSWORD 'moto_service';
 
-GRANT CONNECT ON DATABASE workbox TO workbox_service, budget_service, forza_service;
+GRANT CONNECT ON DATABASE workbox TO workbox_service, budget_service, forza_service, moto_service;
