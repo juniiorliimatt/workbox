@@ -33,11 +33,11 @@ descrita abaixo.
   edita código de produção diretamente nesses repositórios. As regras globais de
   qualidade (`~/.claude/CLAUDE.md`) e as do `CLAUDE.md` de cada serviço continuam sendo o
   padrão a apontar nas revisões — só a autoria de código muda de mãos.
-- **Exceção vigente — permissão total temporária**: `budget-service`, `notes-service` e
-  `forza-telemetry-service` estão com autorização explícita do desenvolvedor pro Claude
-  Code implementar tudo (budget: antes de 2026-09-15; notes: 2026-09-16; forza:
-  2026-10-03). A exceção é **por serviço**, nunca herdada: um serviço novo volta ao
-  padrão "consultor" até o desenvolvedor dizer o contrário. Em dúvida se ainda vale
+- **Exceção vigente — permissão total temporária**: `budget-service`, `notes-service`,
+  `forza-telemetry-service` e `moto-service` estão com autorização explícita do desenvolvedor
+  pro Claude Code implementar tudo (budget: antes de 2026-09-15; notes: 2026-09-16; forza:
+  2026-10-03; moto: 2026-10-06). A exceção é **por serviço**, nunca herdada: um serviço novo
+  volta ao padrão "consultor" até o desenvolvedor dizer o contrário. Em dúvida se ainda vale
   (longo intervalo sem tocar no serviço, mudança de tom), pergunte.
 
 ### Mapa de `CLAUDE.md` por repositório
@@ -53,10 +53,11 @@ este arquivo cobre só o que vale pro monorepo inteiro.
 | [`notes-service/`](notes-service/) | 7055 | Notas/documentos pessoais (conteúdo livre, sem schema fixo) — *resource server*, mesmo padrão de introspecção. **MongoDB**, não Postgres — primeiro serviço do monorepo a usar um banco não-relacional | [`notes-service/CLAUDE.md`](notes-service/CLAUDE.md) |
 | [`forza-telemetry-service/`](forza-telemetry-service/) | 7057 + UDP 5310 | Telemetria do Forza (Data Out UDP → sessões, voltas e resumo de tuning) — *resource server*, mesmo padrão de introspecção. Postgres, schema `forza`. Ainda não registrado em `.gitmodules` (sem repo no GitLab, repo git local sem commits) | [`forza-telemetry-service/CLAUDE.md`](forza-telemetry-service/CLAUDE.md) |
 | [`backup-service/`](backup-service/) | 7058 | Backup do Postgres pela tela (só ADMIN): `pg_dump` de todos os schemas numa pasta (`./backups`), listar/baixar/apagar, cifra opcional por senha. *Resource server*, **sem banco próprio** (arquivos + metadados em disco), role Postgres só-leitura `backup_service`. **Sem restore na API/tela, de propósito** — só `scripts/restore-db.sh`. Submódulo registrado em `.gitmodules` (repo próprio no GitLab, `main` padrão + `develop`) | [`backup-service/CLAUDE.md`](backup-service/CLAUDE.md) |
-| [`workbox-app/`](workbox-app/) | 7053 | Frontend SPA (React/TS/Vite/MUI). Consome `workbox-api`, `budget-service` e `forza-telemetry-service` | [`workbox-app/CLAUDE.md`](workbox-app/CLAUDE.md) |
+| [`moto-service/`](moto-service/) | 7059 | Moto pessoal: abastecimentos, consumo (km/l), km rodados, troca de óleo (próxima por km e tempo) e métricas mensais/anuais — *resource server*, mesmo padrão de introspecção, módulo `MOTO`. Postgres, schema `moto`. Ainda não registrado em `.gitmodules` (sem repo no GitLab, repo git local `main`/`develop`) | [`moto-service/CLAUDE.md`](moto-service/CLAUDE.md) |
+| [`workbox-app/`](workbox-app/) | 7053 | Frontend SPA (React/TS/Vite/MUI). Consome `workbox-api`, `budget-service`, `forza-telemetry-service`, `backup-service` e `moto-service` | [`workbox-app/CLAUDE.md`](workbox-app/CLAUDE.md) |
 
-O frontend consome `workbox-api`, `budget-service` e `forza-telemetry-service` (módulo
-`/forza`). Ele ainda **não** consome o `notes-service` (o proxy do Vite/nginx não roteia
+O frontend consome `workbox-api`, `budget-service`, `forza-telemetry-service` (módulo
+`/forza`) e `moto-service` (módulo `/moto`). Ele ainda **não** consome o `notes-service` (o proxy do Vite/nginx não roteia
 `/api/v1/documents`) — ligar exige rota nova em `workbox-app/vite.config.ts`,
 `workbox-app/nginx.conf.template` e o upstream no `docker-compose.yml`.
 
@@ -116,7 +117,8 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   [`docs/budget-service-migracao-introspeccao.md`](docs/budget-service-migracao-introspeccao.md).
 - **Acesso por módulo**: a introspecção devolve também `modules` (ADMIN: todos; demais: só os
   módulos das roles que têm — `USER` sozinho não libera nenhum). Cada resource server exige o
-  módulo dele (`budget-service` → `FINANCAS`, `forza-telemetry-service` → `FORZA`; 403 sem ele).
+  módulo dele (`budget-service` → `FINANCAS`, `forza-telemetry-service` → `FORZA`,
+  `moto-service` → `MOTO`; 403 sem ele).
   `notes-service` ainda não é módulo liberado, então segue sem essa trava. O `backup-service` não usa
   módulo: exige o papel `ADMIN` (um backup contém hashes de senha e segredos de MFA). Módulo novo =
   migration no `workbox-api` (módulo + role vinculada) + trava no serviço + card no Dashboard.
@@ -124,16 +126,16 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   ajuste correspondente no `workbox-app` entra na mesma tarefa que muda o contrato do
   backend (só o contrato observável por client — rota, payload, status code, auth —
   exige ajuste no front; refactor interno ou schema de banco sem reflexo na API, não).
-- Estado atual dos contratos: `workbox-api`, `budget-service` e `notes-service` têm
-  `openapi/openapi.yaml` versionado; `forza-telemetry-service` **ainda não** (gerar só
-  sob demanda, `@openapi`) — enquanto isso, a referência é o README dele.
+- Estado atual dos contratos: `workbox-api`, `budget-service`, `notes-service` e
+  `moto-service` têm `openapi/openapi.yaml` versionado; `forza-telemetry-service` **ainda
+  não** (gerar só sob demanda, `@openapi`) — enquanto isso, a referência é o README dele.
 - Erros de API em RFC 9457/7807 (`application/problem+json`, `ProblemDetail`), sem stack
   trace — padrão de todos os serviços (`RestExceptionHandler`).
 
 ## Convenção de mensagens de commit
 
 Vale pro Claude Code e pro desenvolvedor, em todos os repositórios do monorepo (raiz
-`workbox`, `workbox-api`, `budget-service`, `notes-service`, `workbox-app`):
+`workbox`, `workbox-api`, `budget-service`, `notes-service`, `moto-service`, `workbox-app`):
 
 - **Idioma**: sempre em português (pt-BR) — assunto e corpo. Só o prefixo de tipo
   (Conventional Commits) e nomes técnicos/símbolos ficam em inglês. Diverge de propósito
@@ -174,6 +176,7 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
 | `notes-service` | 7055 | 8082 | |
 | Redis (`workbox-redis`) | 7056 | 6379 | só `workbox-api` (refresh tokens); sem volume |
 | `forza-telemetry-service` | 7057 + UDP 5310 | 8083 + 5310/udp | |
+| `moto-service` | 7059 | 8085 | schema `moto`, role `moto_service` (`initdb/01`, `02`; num banco existente, `initdb/04-create-moto-role.sql`); fuso de "hoje" `APP_TIMEZONE` (default `America/Fortaleza`) |
 | `backup-service` | 7058 | 8084 | liga `./backups` do host em `/backups`; `BACKUP_HOST_DIR` (preenchido pelo `up-all.sh`) é só o caminho exibido na tela; role `backup_service` vem de `initdb/03-create-backup-role.sql` (num banco existente, rodar à mão) |
 
 - **Ciclo de vida dos containers**: parar/remover containers de app e front nunca deve
@@ -186,7 +189,7 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
 - Backup/restore: `scripts/backup-db.sh` / `scripts/restore-db.sh` via
   `docker compose --profile backup run --rm backup|restore` (restore usa `--clean
   --if-exists` — confirme o alvo antes).
-- **Java 25 LTS** nos quatro backends (`ARG JAVA_VERSION` no `Dockerfile` + `java.toolchain`
+- **Java 25 LTS** em todos os backends, `moto-service` incluído (`ARG JAVA_VERSION` no `Dockerfile` + `java.toolchain`
   no `build.gradle`) e Node 22 no front: ao atualizar, mude todos os lugares juntos.
 - Dockerfiles: multi-stage, usuário non-root. Os `docs/` da raiz documentam a migração
   do `budget-service` pra introspecção remota (vale como referência pros demais).
@@ -206,10 +209,11 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
   `sonarcloud-check` (com `docker:dind` pros ITs com Testcontainers); `notes-service` tem
   `test` → `contract-drift-check` → `build`; `forza-telemetry-service` tem `test` (dind) →
   `contract-drift-check` → `build`;
+  `moto-service` tem `test` (dind) → `contract-drift-check` → `build`;
   `workbox-app` tem `lint-test-build` em toda branch e `sonarcloud-check`. O Sonar dispara só
   em MR e em `main` (**não** `develop` — limitação do plano Free, não re-adicionar sem
   conferir). Sonar enrolado: `workbox-api`, `budget-service`, `workbox-app` (a raiz foi
-  removida de propósito); `notes-service` e `forza-telemetry-service` ainda sem Sonar.
+  removida de propósito); `notes-service`, `forza-telemetry-service` e `moto-service` ainda sem Sonar.
 - O grupo GitLab (`sonar-group-oojuniiin`) já foi renomeado várias vezes — confirme a URL
   do remote em vez de assumir.
 

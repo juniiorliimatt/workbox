@@ -13,6 +13,7 @@ prioridade é ter um lugar central pra prototipar e aprender.
 | [`budget-service`](budget-service/) | Backend — finanças pessoais (*resource server*, valida JWT do workbox-api) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase | [README](budget-service/README.md) |
 | [`notes-service`](notes-service/) | Backend — notas/documentos pessoais (*resource server*, valida JWT do workbox-api) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, MongoDB | [README](notes-service/README.md) |
 | [`forza-telemetry-service`](forza-telemetry-service/) | Backend — telemetria do Forza (Data Out UDP → sessões/voltas/resumo de tuning; *resource server*) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase, UDP | [README](forza-telemetry-service/README.md) |
+| [`moto-service`](moto-service/) | Backend — moto pessoal: abastecimentos, consumo (km/l), km rodados, troca de óleo e métricas (*resource server*, módulo `MOTO`) | Java 25 LTS, Spring Boot 3.5.16, Gradle 9.7.1, PostgreSQL/Liquibase | [README](moto-service/README.md) |
 | [`workbox-app`](workbox-app/) | Frontend | React 18, TypeScript, Vite, MUI | [README](workbox-app/README.md) |
 
 Cada microserviço backend é um repositório GitLab próprio — não pacotes dentro de um
@@ -94,11 +95,11 @@ provisiona, na primeira subida (só roda em volume vazio):
 
 - Extensões (`pgcrypto`, `uuid-ossp`) — instaladas uma vez pelo superusuário, os
   changesets de Liquibase que tentam recriá-las viram no-op.
-- Um role Postgres por microserviço (`workbox_service`, `budget_service`, `forza_service`), **dono só do seu
+- Um role Postgres por microserviço (`workbox_service`, `budget_service`, `forza_service`, `moto_service`), **dono só do seu
   próprio schema** — sem `CREATE` no banco, sem acesso a schema de outro serviço
   (confirmado: `SELECT` cross-schema dá `permission denied`). Cada app se conecta com o
   role do seu próprio serviço, nunca com o superusuário `postgres`.
-- Os schemas (`workbox` para o workbox-api; `budget` para o budget-service; `forza` para o forza-telemetry-service).
+- Os schemas (`workbox` para o workbox-api; `budget` para o budget-service; `forza` para o forza-telemetry-service; `moto` para o moto-service — num banco já existente, `initdb/04-create-moto-role.sql` cria o role e o schema).
 
 Se já tiver `.pgdata/` de antes, rode os scripts de `initdb/` manualmente com `psql`
 (nessa ordem: `00`, `01`, `02`).
@@ -136,6 +137,10 @@ MONGODB_URI="mongodb://root:MyS3cur3M0ngoPassw0rd2026!@localhost:7054/notes?auth
 cd forza-telemetry-service
 DATABASE_URL="jdbc:postgresql://localhost:7050/workbox?reWriteBatchedInserts=true" ./gradlew bootRun
 
+# moto-service (7059) — resource server, precisa de um JWT do workbox-api com o módulo MOTO
+cd moto-service
+./gradlew bootRun
+
 # frontend
 cd workbox-app
 npm install
@@ -146,7 +151,7 @@ npm run dev   # http://localhost:7053
 
 Cada submódulo tem seu próprio `Dockerfile` (multi-stage, usuário non-root) — `docker
 compose up --build -d` na raiz sobe Postgres + MongoDB + Redis + `workbox-api` +
-`budget-service` + `notes-service` + `forza-telemetry-service` + `workbox-app`, um comando só, sem precisar entrar em
+`budget-service` + `notes-service` + `forza-telemetry-service` + `moto-service` + `workbox-app`, um comando só, sem precisar entrar em
 cada submódulo.
 
 `workbox-app` é standalone — nginx serve os assets buildados (`npm run build`, saída
@@ -187,6 +192,8 @@ sobrescrever; copie `.env.example` → `.env`, que é gitignored):
 | `FORZA_SERVICE_PORT` | `7057` | Porta da API REST do `forza-telemetry-service` exposta no host. |
 | `FORZA_UDP_PORT` | `5310` | Porta **UDP** exposta no host pra o Data Out do Forza (Xbox → IP do PC). Evite 5200–5300 (o Forza Horizon usa essa faixa) e libere UDP de entrada no firewall. |
 | `FORZA_INTROSPECTION_CLIENT_ID` / `FORZA_INTROSPECTION_CLIENT_SECRET` | `forza-telemetry-service` / `MyS3cur3Cli3ntS3cr3t!F0rza!` | Idem, client credentials do `forza-telemetry-service`. |
+| `MOTO_SERVICE_PORT` | `7059` | Porta da API REST do `moto-service` exposta no host. |
+| `MOTO_INTROSPECTION_CLIENT_ID` / `MOTO_INTROSPECTION_CLIENT_SECRET` | `moto-service` / `MyS3cur3Cli3ntS3cr3t!M0t0!` | Idem, client credentials do `moto-service`. |
 | `REDIS_PORT` | `7056` | Porta do Redis exposta no **host**. Dentro da rede docker o `workbox-api` sempre fala com `redis:6379` — isso nunca muda. |
 | `REDIS_HOST` | `redis` | Host usado pelo `workbox-api` pra montar a conexão Redis. Só sobrescreva se apontar pra um Redis fora do compose. |
 | `REDIS_PASSWORD` | `MyS3cur3R3disP@ssw0rd2026!` | Senha do Redis (`--requirepass`) — precisa bater entre o serviço `redis` e o `workbox-api`. |
@@ -200,7 +207,7 @@ docker compose ps      # confirma os 8 serviços "healthy"
 ## Compose de produção
 
 `docker-compose.prod.yml` sobe o mesmo stack do dev (Postgres, Redis, MongoDB, `workbox-api`,
-`budget-service`, `notes-service`, `forza-telemetry-service`, `workbox-app`) mais o Caddy (TLS
+`budget-service`, `notes-service`, `forza-telemetry-service`, `moto-service`, `workbox-app`) mais o Caddy (TLS
 automático), com diferenças: **nenhum segredo tem default** (`${VAR:?...}` — o compose recusa
 subir sem eles), nenhum serviço expõe porta HTTP no host (só o Caddy; exceção: UDP 5310 do
 forza, a restringir no firewall ao IP do console) e Redis/MongoDB exigem senha.
@@ -210,7 +217,7 @@ cp .env.prod.example .env.prod   # preencha tudo (senhas, JWT_SECRET, domínios,
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 ```
 
-Cada resource server (`budget-service`, `notes-service`, `forza-telemetry-service`) precisa de um
+Cada resource server (`budget-service`, `notes-service`, `forza-telemetry-service`, `moto-service`) precisa de um
 cliente ativo em `workbox.api_clients` com o secret real — as linhas seed dos changesets usam
 secrets de estudo; insira os reais via changeset novo e desative as seeds (ver
 [`workbox-api/README.md`](workbox-api/README.md#clientes-de-introspecção-resource-servers)). O
