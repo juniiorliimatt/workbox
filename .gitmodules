@@ -19,3 +19,7 @@
 	path = backup-service
 	url = git@gitlab.com:sonar-group-oojuniiin/backup-service.git
 	branch = develop
+[submodule "moto-service"]
+	path = moto-service
+	url = git@gitlab.com:sonar-group-oojuniiin/moto-service.git
+	branch = develop

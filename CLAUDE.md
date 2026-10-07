@@ -53,7 +53,7 @@ este arquivo cobre só o que vale pro monorepo inteiro.
 | [`notes-service/`](notes-service/) | 7055 | Notas/documentos pessoais (conteúdo livre, sem schema fixo) — *resource server*, mesmo padrão de introspecção. **MongoDB**, não Postgres — primeiro serviço do monorepo a usar um banco não-relacional | [`notes-service/CLAUDE.md`](notes-service/CLAUDE.md) |
 | [`forza-telemetry-service/`](forza-telemetry-service/) | 7057 + UDP 5310 | Telemetria do Forza (Data Out UDP → sessões, voltas e resumo de tuning) — *resource server*, mesmo padrão de introspecção. Postgres, schema `forza`. Ainda não registrado em `.gitmodules` (sem repo no GitLab, repo git local sem commits) | [`forza-telemetry-service/CLAUDE.md`](forza-telemetry-service/CLAUDE.md) |
 | [`backup-service/`](backup-service/) | 7058 | Backup do Postgres pela tela (só ADMIN): `pg_dump` de todos os schemas numa pasta (`./backups`), listar/baixar/apagar, cifra opcional por senha. *Resource server*, **sem banco próprio** (arquivos + metadados em disco), role Postgres só-leitura `backup_service`. **Sem restore na API/tela, de propósito** — só `scripts/restore-db.sh`. Submódulo registrado em `.gitmodules` (repo próprio no GitLab, `main` padrão + `develop`) | [`backup-service/CLAUDE.md`](backup-service/CLAUDE.md) |
-| [`moto-service/`](moto-service/) | 7059 | Moto pessoal: abastecimentos, consumo (km/l), km rodados, troca de óleo (próxima por km e tempo) e métricas mensais/anuais — *resource server*, mesmo padrão de introspecção, módulo `MOTO`. Postgres, schema `moto`. Ainda não registrado em `.gitmodules` (sem repo no GitLab, repo git local `main`/`develop`) | [`moto-service/CLAUDE.md`](moto-service/CLAUDE.md) |
+| [`moto-service/`](moto-service/) | 7059 | Moto pessoal: abastecimentos, consumo (km/l), km rodados, troca de óleo (próxima por km e tempo) e métricas mensais/anuais — *resource server*, mesmo padrão de introspecção, módulo `MOTO`. Postgres, schema `moto`. Submódulo registrado em `.gitmodules` (repo **privado** no GitLab, grupo `sonar-group-oojuniiin`, espelhado no GitHub `juniiorliimatt/moto-service` pelo hook `pre-push`; `main` padrão + `develop`; nenhum dos dois tem CI de GitHub — só o `.gitlab-ci.yml`) | [`moto-service/CLAUDE.md`](moto-service/CLAUDE.md) |
 | [`workbox-app/`](workbox-app/) | 7053 | Frontend SPA (React/TS/Vite/MUI). Consome `workbox-api`, `budget-service`, `forza-telemetry-service`, `backup-service` e `moto-service` | [`workbox-app/CLAUDE.md`](workbox-app/CLAUDE.md) |
 
 O frontend consome `workbox-api`, `budget-service`, `forza-telemetry-service` (módulo
@@ -99,6 +99,13 @@ Uso exclusivo do Claude Code durante teste, nunca em demo pro usuário final.
 Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yaml` — a
 **fonte da verdade** do que aquela API expõe. Regras (valem pra todos os serviços):
 
+- **Contrato obrigatório, antes do front** (decisão do desenvolvedor, 2026-10-07): todo serviço
+  backend **sempre** tem o `openapi/openapi.yaml` gerado e commitado, e ele tem que existir
+  **antes** de qualquer tela ser construída sobre a API. Não se espera pedido (`@openapi`): criar
+  e manter o contrato faz parte da tarefa de qualquer endpoint. Serviço novo nasce com o contrato
+  no mesmo commit do primeiro endpoint, e o front só começa depois que ele está versionado.
+  **Esta regra tem precedência neste monorepo** sobre o "somente sob demanda" do
+  `~/.claude/CLAUDE.md` global (mesma lógica da convenção de commits).
 - Nenhum client (frontend, outro microserviço, agente de IA) deve assumir comportamento
   de endpoint que não esteja descrito no `openapi.yaml` daquele serviço.
 - Qualquer mudança de contrato (novo endpoint, novo campo, mudança de schema) exige
@@ -126,9 +133,10 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   ajuste correspondente no `workbox-app` entra na mesma tarefa que muda o contrato do
   backend (só o contrato observável por client — rota, payload, status code, auth —
   exige ajuste no front; refactor interno ou schema de banco sem reflexo na API, não).
-- Estado atual dos contratos: `workbox-api`, `budget-service`, `notes-service` e
-  `moto-service` têm `openapi/openapi.yaml` versionado; `forza-telemetry-service` **ainda
-  não** (gerar só sob demanda, `@openapi`) — enquanto isso, a referência é o README dele.
+- Estado atual dos contratos: **todos** os serviços têm `openapi/openapi.yaml` versionado
+  (`workbox-api`, `budget-service`, `notes-service`, `forza-telemetry-service`,
+  `backup-service` e `moto-service`). Serviço sem contrato é pendência a corrigir antes de
+  qualquer trabalho de front, não uma situação aceitável.
 - Erros de API em RFC 9457/7807 (`application/problem+json`, `ProblemDetail`), sem stack
   trace — padrão de todos os serviços (`RestExceptionHandler`).
 
