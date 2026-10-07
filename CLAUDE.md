@@ -104,8 +104,8 @@ Cada microserviço backend versiona seu próprio `<serviço>/openapi/openapi.yam
   **antes** de qualquer tela ser construída sobre a API. Não se espera pedido (`@openapi`): criar
   e manter o contrato faz parte da tarefa de qualquer endpoint. Serviço novo nasce com o contrato
   no mesmo commit do primeiro endpoint, e o front só começa depois que ele está versionado.
-  **Esta regra tem precedência neste monorepo** sobre o "somente sob demanda" do
-  `~/.claude/CLAUDE.md` global (mesma lógica da convenção de commits).
+  O `~/.claude/CLAUDE.md` global diz o mesmo (seção 5, atualizado em 2026-10-07): não há mais
+  nenhum "somente sob demanda" para contrato, nem exceção por projeto.
 - Nenhum client (frontend, outro microserviço, agente de IA) deve assumir comportamento
   de endpoint que não esteja descrito no `openapi.yaml` daquele serviço.
 - Qualquer mudança de contrato (novo endpoint, novo campo, mudança de schema) exige
