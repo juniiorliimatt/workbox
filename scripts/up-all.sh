@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Sobe todos os containers do stack workbox (postgres, redis, mongo,
-# workbox-api, budget-service, notes-service, forza-telemetry-service, backup-service, workbox-app). Serviços dos
+# workbox-api, budget-service, notes-service, forza-telemetry-service, backup-service, moto-service,
+# workbox-app). Serviços dos
 # profiles "backup"/"restore" ficam de fora, como sempre (não sobem com
 # "docker compose up" normal). Complementa scripts/down-all.sh: down para,
 # up sobe de volta os mesmos containers, sem rebuild.

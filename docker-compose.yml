@@ -246,6 +246,38 @@ services:
       resources:
         limits: { cpus: "1", memory: 512M }
 
+  # Moto: abastecimentos, consumo, km rodados e troca de óleo. Só o Postgres é dependência dura; o
+  # workbox-api é consultado apenas pra validar o token das chamadas REST (introspecção).
+  moto-service:
+    build: ./moto-service
+    container_name: moto-service
+    restart: unless-stopped
+    environment:
+      - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
+      - PORT=8085
+      - DATABASE_URL=jdbc:postgresql://${DB_HOST:-postgres}:5432/workbox
+      - POSTGRES_USER=moto_service
+      - POSTGRES_PASSWORD=moto_service
+      - INTROSPECTION_URI=http://workbox-api:8080/api/v1/auth/introspect
+      # Client credentials do moto-service em /api/v1/auth/introspect — tem que bater com uma linha
+      # ativa em workbox-api.api_clients (changelog 261006_0001_seed_api_clients_moto_service.sql).
+      - INTROSPECTION_CLIENT_ID=${MOTO_INTROSPECTION_CLIENT_ID:-moto-service}
+      - INTROSPECTION_CLIENT_SECRET=${MOTO_INTROSPECTION_CLIENT_SECRET:-MyS3cur3Cli3ntS3cr3t!M0t0!}
+    ports:
+      - "${MOTO_SERVICE_PORT:-7059}:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
   workbox-app:
     build: ./workbox-app
     container_name: workbox-app
@@ -255,6 +287,7 @@ services:
       - BUDGET_SERVICE_UPSTREAM=http://budget-service:8081
       - FORZA_SERVICE_UPSTREAM=http://forza-telemetry-service:8083
       - BACKUP_SERVICE_UPSTREAM=http://backup-service:8084
+      - MOTO_SERVICE_UPSTREAM=http://moto-service:8085
     ports:
       - "${FRONT_PORT:-7053}:8080"
     depends_on:
