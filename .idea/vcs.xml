@@ -2,7 +2,11 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/backup-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/budget-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/forza-telemetry-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/moto-service" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/notes-service" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/workbox-api" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/workbox-app" vcs="Git" />
   </component>
