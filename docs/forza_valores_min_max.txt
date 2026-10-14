@@ -1,0 +1,55 @@
+pneus 
+pressão dos pneus
+dianteira min 1,0 max 3,8
+traseira min 1,0 max 3,8
+
+marchas
+relação de marchas
+transmissão final min 2,20 max 6,10
+marchas de 1 a 10 min 0,48 max 6
+
+Alinhamento
+cambagem
+dianteira negativo -5,0 0 positivo 5,0
+traseira negativa -5,0 0 positvo 5,0
+convergência
+dianteira negativo -5,0 0 positivo 5,0
+traseira negativa -5,0 0 positvo 5,0
+caster dianteiro
+angulo min 1,0 max 7,0
+
+Barras estabilizadoras
+Dianteira macia min 1,00 max 65 rigida
+Traseira macia min 1,00 max 65 rigida
+
+Molas varia de carro pra carro então não da pra por
+
+Amortecimento
+Rigidez de retorno
+dianteiro macia 1,0 20,0 rigida
+traseira macia 1,0 20,0 rigida
+Rigidez da compressão
+dianteiro macia 1,0 20,0 rigida
+traseira macia 1,0 20,0 rigida
+
+aerodinâmica muda de carro pra carro então não da pra por
+
+freio
+Força de frenagem
+equilibrio traseira 0% dianteira 100%
+força de frenagem
+pressão baixa 0% alta 200%
+
+diferencial
+dianteira
+aceleração 0% ~ 100%
+desaceleração 0% ~100%
+
+traseira
+aceleração 0% ~ 100%
+desaceleração 0% ~10
+
+central
+equilibrio 0% ~ 100%
+
+
