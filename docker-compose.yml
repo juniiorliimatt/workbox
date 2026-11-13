@@ -43,7 +43,7 @@ services:
   workbox-api:
     build: ./workbox-api
     container_name: workbox-api
-    restart: unless-stopped
+    restart: "no"
     environment:
       - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
       - PORT=8080
@@ -81,7 +81,7 @@ services:
   budget-service:
     build: ./budget-service
     container_name: budget-service
-    restart: unless-stopped
+    restart: "no"
     environment:
       - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
       - PORT=8081
@@ -138,7 +138,7 @@ services:
   notes-service:
     build: ./notes-service
     container_name: notes-service
-    restart: unless-stopped
+    restart: "no"
     environment:
       - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
       - PORT=8082
@@ -172,7 +172,7 @@ services:
   forza-telemetry-service:
     build: ./forza-telemetry-service
     container_name: forza-telemetry-service
-    restart: unless-stopped
+    restart: "no"
     environment:
       - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
       - PORT=8083
@@ -213,7 +213,7 @@ services:
   backup-service:
     build: ./backup-service
     container_name: backup-service
-    restart: unless-stopped
+    restart: "no"
     environment:
       - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
       - PORT=8084
@@ -251,7 +251,7 @@ services:
   moto-service:
     build: ./moto-service
     container_name: moto-service
-    restart: unless-stopped
+    restart: "no"
     environment:
       - PROFILE_ACTIVE=${SPRING_PROFILE:-dev}
       - PORT=8085
@@ -281,7 +281,7 @@ services:
   workbox-app:
     build: ./workbox-app
     container_name: workbox-app
-    restart: unless-stopped
+    restart: "no"
     environment:
       - WORKBOX_API_UPSTREAM=http://workbox-api:8080
       - BUDGET_SERVICE_UPSTREAM=http://budget-service:8081
