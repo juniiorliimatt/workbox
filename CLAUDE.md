@@ -10,8 +10,8 @@ Este monorepo é desenvolvido por **um único agente de IA: o Claude Code, full-
 backend, frontend, persistência, infra e a integração entre as camadas. Desde 2026-10-03
 o Antigravity (`GEMINI.md`) **deixou de ser usado**: o frontend (`workbox-app/`) passou a
 ser desenvolvido pelo Claude Code, e a antiga regra "Claude só mexe no backend" foi
-revogada. O que continua valendo é a **autoria de código por repositório de backend**,
-descrita abaixo.
+revogada. Desde 2026-11-15 o Claude Code é também o **único autor de código de todos os
+repositórios** (ver abaixo).
 
 ## Backend — um repo/submódulo por microserviço
 - Cada microserviço é um repositório GitLab próprio, adicionado como submódulo — **não**
@@ -22,23 +22,17 @@ descrita abaixo.
 - Escopo backend: API REST, domínio, persistência (JPA/Liquibase), segurança
   (Spring Security/JWT), infra (Gradle, CI, Docker/deploy).
 
-### `workbox-api/` — implementação exclusiva do Claude Code
-- Responsabilidade de código é **só do Claude Code** — o desenvolvedor não escreve linha
-  de código neste repositório, apenas solicita mudanças/features.
-- Regras específicas do serviço em [`workbox-api/CLAUDE.md`](workbox-api/CLAUDE.md).
-
-### `budget-service/` e demais serviços backend futuros — padrão: implementação do desenvolvedor
-- **Padrão**: o desenvolvedor implementa sozinho. Claude Code atua **só como consultor**:
-  análises, recomendações, code review e exemplos de código a seguir — não escreve nem
-  edita código de produção diretamente nesses repositórios. As regras globais de
-  qualidade (`~/.claude/CLAUDE.md`) e as do `CLAUDE.md` de cada serviço continuam sendo o
-  padrão a apontar nas revisões — só a autoria de código muda de mãos.
-- **Exceção vigente — permissão total temporária**: `budget-service`, `notes-service`,
-  `forza-telemetry-service` e `moto-service` estão com autorização explícita do desenvolvedor
-  pro Claude Code implementar tudo (budget: antes de 2026-09-15; notes: 2026-09-16; forza:
-  2026-10-03; moto: 2026-10-06). A exceção é **por serviço**, nunca herdada: um serviço novo
-  volta ao padrão "consultor" até o desenvolvedor dizer o contrário. Em dúvida se ainda vale
-  (longo intervalo sem tocar no serviço, mudança de tom), pergunte.
+### Autoria de código — Claude Code em todos os repositórios
+- **Todos** os repositórios (`workbox-api`, todos os serviços backend, atuais e futuros, o
+  `workbox-app` e a raiz) são implementados pelo **Claude Code**: o desenvolvedor não
+  escreve código, apenas solicita mudanças/features (decisão do desenvolvedor,
+  2026-11-15). Serviço novo já nasce com essa autoria — não existe mais o padrão
+  "consultor" nem exceção por serviço (as antigas permissões temporárias de
+  `budget-service`, `notes-service`, `forza-telemetry-service`, `backup-service` e
+  `moto-service` viraram a regra).
+- Continuam valendo as regras globais de qualidade (`~/.claude/CLAUDE.md`), as do
+  `CLAUDE.md` de cada serviço e as confirmações obrigatórias (push, dependência,
+  build/CI/deploy, migration destrutiva).
 
 ### Mapa de `CLAUDE.md` por repositório
 
