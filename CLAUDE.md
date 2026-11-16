@@ -227,5 +227,10 @@ containers, sem remover, incluindo o Postgres — uso pontual, nunca automático
 
 ## Bugs fora do escopo
 
-Bug encontrado no meio de outra tarefa **não relacionado** ao que foi pedido: sinalize em
-1–2 linhas e siga — não corrija sem pedido do desenvolvedor.
+Bug encontrado no meio de outra tarefa, mesmo **não relacionado** ao que foi pedido:
+**corrija** (decisão do desenvolvedor, 2026-11-15 — o Claude Code é o único dono dos
+projetos). Mesmo fluxo de qualquer correção: teste que reproduz antes, correção, commit
+**próprio** e atômico (separado do commit da tarefa principal) e relato em 1–2 linhas no
+fim. Só pergunte antes se a correção cair nas confirmações obrigatórias (dependência,
+build/CI/deploy, migration destrutiva) ou mudar comportamento que o usuário vê de um jeito
+que não seja claramente o pretendido.
